@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.wiretap.kafka.message.KafkaHeaderMaskingHandler;
 import io.wiretap.kafka.message.KafkaMessageInfo;
+import io.wiretap.kafka.message.KafkaRecordLogFilter;
 import io.wiretap.kafka.message.KafkaTopicMaskingHandler;
 import io.wiretap.kafka.message.KafkaValueMaskingHandler;
 import io.wiretap.kafka.message.settings.KafkaAccessFieldNames;
@@ -50,6 +51,8 @@ public class KafkaLogSink {
     private final KafkaHeaderMaskingHandler headerMaskingHandler;
     @Nullable
     private final KafkaTopicMaskingHandler topicMaskingHandler;
+    @Nullable
+    private final KafkaRecordLogFilter recordLogFilter;
     private final WiretapMetrics metrics;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -59,6 +62,7 @@ public class KafkaLogSink {
             @Nullable KafkaValueMaskingHandler valueMaskingHandler,
             @Nullable KafkaHeaderMaskingHandler headerMaskingHandler,
             @Nullable KafkaTopicMaskingHandler topicMaskingHandler,
+            @Nullable KafkaRecordLogFilter recordLogFilter,
             WiretapMetrics metrics
     ) {
         this.settings = settings;
@@ -66,6 +70,7 @@ public class KafkaLogSink {
         this.valueMaskingHandler = valueMaskingHandler;
         this.headerMaskingHandler = headerMaskingHandler;
         this.topicMaskingHandler = topicMaskingHandler;
+        this.recordLogFilter = recordLogFilter;
         this.metrics = metrics == null ? new NoOpWiretapMetrics() : metrics;
     }
 
@@ -84,6 +89,23 @@ public class KafkaLogSink {
     }
 
     /**
+     * @return {@code true} if the registered {@link KafkaRecordLogFilter} admits
+     *         the record, or if no filter bean is present. A filter that throws
+     *         admits the record and is counted as {@code filter_error}, so a
+     *         broken predicate never silences the log.
+     */
+    private boolean isRecordLogged(KafkaMessageInfo info, String direction) {
+        if (recordLogFilter == null) return true;
+        try {
+            return recordLogFilter.isLogged(info);
+        } catch (Exception e) {
+            log.error("Kafka record log filter failed on topic {}", info.getTopic(), e);
+            metrics.recordKafkaSkipped(direction, "filter_error");
+            return true;
+        }
+    }
+
+    /**
      * Emits a {@code kafka_info} JSON object via MDC + {@code log.info(...)}.
      * Applies masking, truncation and per-topic overrides.
      */
@@ -96,6 +118,11 @@ public class KafkaLogSink {
             }
             if (!isTopicLogged(info.getTopic())) {
                 metrics.recordKafkaSkipped(direction, "exclude_topic");
+                return;
+            }
+
+            if (!isRecordLogged(info, direction)) {
+                metrics.recordKafkaSkipped(direction, "filter_bean");
                 return;
             }
 

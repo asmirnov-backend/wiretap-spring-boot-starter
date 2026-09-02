@@ -2,6 +2,7 @@ package io.wiretap.configuration;
 
 import io.wiretap.kafka.KafkaLogSink;
 import io.wiretap.kafka.message.KafkaHeaderMaskingHandler;
+import io.wiretap.kafka.message.KafkaRecordLogFilter;
 import io.wiretap.kafka.message.KafkaTopicMaskingHandler;
 import io.wiretap.kafka.message.KafkaValueMaskingHandler;
 import io.wiretap.kafka.message.settings.KafkaAccessFieldNames;
@@ -33,11 +34,12 @@ public class OutgoingKafkaProducerConfiguration {
             @Autowired(required = false) KafkaValueMaskingHandler valueMaskingHandler,
             @Autowired(required = false) KafkaHeaderMaskingHandler headerMaskingHandler,
             @Autowired(required = false) KafkaTopicMaskingHandler topicMaskingHandler,
+            @Autowired(required = false) KafkaRecordLogFilter recordLogFilter,
             WiretapMetrics metrics
     ) {
         KafkaAccessFieldNames names = fieldNames.getKafka();
         return new KafkaLogSink(settings, names,
-                valueMaskingHandler, headerMaskingHandler, topicMaskingHandler, metrics);
+                valueMaskingHandler, headerMaskingHandler, topicMaskingHandler, recordLogFilter, metrics);
     }
 
     /**

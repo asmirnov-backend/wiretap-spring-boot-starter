@@ -6,7 +6,19 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- `KafkaRecordLogFilter` — an opt-in SPI deciding per record whether a Kafka log
+  line is written at all. One topic often carries traffic from several producers
+  while only part of it is worth logging; a single Spring bean now expresses that
+  rule in code (several key fields, nesting, per-topic policies, values pulled from
+  a feature flag) instead of a configuration DSL. The filter runs after
+  `exclude-topic-patterns` and before masking, truncation and serialisation, so it
+  reads the raw record and a rejected one pays for nothing else. It receives the
+  whole `KafkaMessageInfo` snapshot — key, value, headers, direction, status,
+  duration — and one bean covers both producer and consumer. Without a bean every
+  record is logged, so 2.0.x behaviour is unchanged. Rejected records are counted
+  as `wiretap.kafka.skipped{reason="filter_bean"}`; a filter that throws leaves the
+  record in the log and is counted as `reason="filter_error"`.
 
 ## [2.0.0] - 2026-09-02
 
