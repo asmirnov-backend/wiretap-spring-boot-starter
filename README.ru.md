@@ -814,6 +814,22 @@ wiretap:
           VALUE: false                       # не логировать тело на семействе orders.*
 ```
 
+Настройка, не заданная в `specific-topic-settings[]`, наследуется из общего блока,
+поэтому переопределение работает в обе стороны — и выключить там, где глобально
+включено, и включить там, где глобально выключено:
+
+```yaml
+wiretap:
+  kafka-producer-interceptor:
+    enable-value-masking: false            # глобально выключено
+    specific-topic-settings:
+      - match-topic-pattern: "secrets\\..*"
+        enable-value-masking: true         # но включено на этих топиках
+```
+
+`match-topic-pattern` матчится через `String.matches`, то есть должен покрывать имя
+топика целиком: пишите `orders\\..*`, а не `orders`.
+
 Три опциональных SPI — зарегистрируйте бин нужного типа:
 
 | Интерфейс | Применяется к |

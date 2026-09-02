@@ -20,8 +20,8 @@ class KafkaProducerLogMessageSettingsTest {
                     .containsEntry(KafkaConfigurableField.TOPIC, Boolean.TRUE)
                     .containsEntry(KafkaConfigurableField.VALUE, Boolean.TRUE)
                     .containsEntry(KafkaConfigurableField.HEADERS, Boolean.TRUE);
-            assertThat(props.isEnableValueMasking()).isTrue();
-            assertThat(props.getMessageBodySettings().getMaxValueLength()).isEqualTo(2000);
+            assertThat(props.isValueMaskingEnabled()).isTrue();
+            assertThat(props.getMessageBodySettings().getEffectiveMaxValueLength()).isEqualTo(2000);
             assertThat(props.getExcludeTopicPatterns()).isEmpty();
         });
     }
@@ -39,7 +39,7 @@ class KafkaProducerLogMessageSettingsTest {
                 .run(ctx -> {
                     KafkaProducerLogMessageSettings props = ctx.getBean(KafkaProducerLogMessageSettings.class);
                     assertThat(props.getVisibilitySettings().get(KafkaConfigurableField.VALUE)).isFalse();
-                    assertThat(props.getMessageBodySettings().getMaxValueLength()).isEqualTo(500);
+                    assertThat(props.getMessageBodySettings().getEffectiveMaxValueLength()).isEqualTo(500);
                     assertThat(props.getExcludeTopicPatterns()).containsExactly(".*\\.internal\\..*");
                     assertThat(props.getHeaders()).containsExactly("x-trace-id", "x-tenant");
                 });

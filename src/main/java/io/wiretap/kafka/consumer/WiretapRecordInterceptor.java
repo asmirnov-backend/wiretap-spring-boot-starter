@@ -132,7 +132,7 @@ public class WiretapRecordInterceptor<K, V> implements RecordInterceptor<K, V> {
                 .keyLength(byteLength(record.key()))
                 .value(record.value() == null ? null : String.valueOf(record.value()))
                 .valueLength(byteLength(record.value()))
-                .headers(sink.collectHeaders(record.headers()))
+                .headers(sink.collectHeaders(record.topic(), record.headers()))
                 .timestamp(KafkaLogSink.formatTimestamp(record.timestamp()))
                 .timestampType(timestampTypeName(record.timestampType()))
                 .duration(duration)

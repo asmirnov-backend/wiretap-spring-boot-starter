@@ -96,7 +96,7 @@ public class WiretapProducerListener implements ProducerListener<Object, Object>
                     .keyLength(byteLength(record.key()))
                     .value(record.value() == null ? null : String.valueOf(record.value()))
                     .valueLength(byteLength(record.value()))
-                    .headers(sink.collectHeaders(record.headers()))
+                    .headers(sink.collectHeaders(record.topic(), record.headers()))
                     .timestamp(timestamp)
                     .status(status)
                     .errorClass(exception == null ? null : exception.getClass().getName())

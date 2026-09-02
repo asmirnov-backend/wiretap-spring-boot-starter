@@ -34,8 +34,73 @@ class KafkaConsumerLogMessageSettingsTest {
                 .run(ctx -> {
                     KafkaConsumerLogMessageSettings props = ctx.getBean(KafkaConsumerLogMessageSettings.class);
                     assertThat(props.getVisibilitySettings().get(KafkaConfigurableField.HEADERS)).isFalse();
-                    assertThat(props.getMessageBodySettings().getMaxValueLength()).isEqualTo(128);
+                    assertThat(props.getMessageBodySettings().getEffectiveMaxValueLength()).isEqualTo(128);
                     assertThat(props.getExcludeTopicPatterns()).containsExactly("__consumer_offsets");
+                });
+    }
+
+    @Test
+    void perTopicOverrideEnablesMaskingDisabledGlobally() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-consumer-interceptor.enable-value-masking=false",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].match-topic-pattern=secrets\\..*",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].enable-value-masking=true"
+                )
+                .run(ctx -> {
+                    KafkaConsumerLogMessageSettings props = ctx.getBean(KafkaConsumerLogMessageSettings.class);
+                    assertThat(props.getSettingsByTopic("secrets.events").isValueMaskingEnabled()).isTrue();
+                    assertThat(props.getSettingsByTopic("demo.events").isValueMaskingEnabled()).isFalse();
+                });
+    }
+
+    @Test
+    void perTopicOverrideOfOneBodySettingKeepsTheOthers() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-consumer-interceptor.message-body-settings.enable-value-masking=true",
+                        "wiretap.kafka-consumer-interceptor.message-body-settings.max-value-length=10000",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].match-topic-pattern=bulk\\..*",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].message-body-settings.max-value-length=50000"
+                )
+                .run(ctx -> {
+                    KafkaConsumerLogMessageSettings props = ctx.getBean(KafkaConsumerLogMessageSettings.class);
+                    var merged = props.getSettingsByTopic("bulk.events").getMessageBodySettings();
+                    assertThat(merged.getEffectiveMaxValueLength()).isEqualTo(50000);
+                    assertThat(merged.isValueMaskingEnabled()).isTrue();
+                });
+    }
+
+    @Test
+    void overrideCarriesOnlyTheKeysItConfigures() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].match-topic-pattern=bulk\\..*",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].visibility-settings.VALUE=false"
+                )
+                .run(ctx -> {
+                    SpecificKafkaInfoLogMessageSettings override = ctx
+                            .getBean(KafkaConsumerLogMessageSettings.class)
+                            .getSpecificTopicSettings()
+                            .get(0);
+
+                    assertThat(override.getVisibilitySettings())
+                            .containsExactly(java.util.Map.entry(KafkaConfigurableField.VALUE, Boolean.FALSE));
+                    assertThat(override.getEnableValueMasking()).isNull();
+                    assertThat(override.getHeaders()).isEmpty();
+                });
+    }
+
+    @Test
+    void topicBlockWithoutPatternIsIgnoredRatherThanThrowing() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-consumer-interceptor.enable-value-masking=true",
+                        "wiretap.kafka-consumer-interceptor.specific-topic-settings[0].enable-value-masking=false"
+                )
+                .run(ctx -> {
+                    KafkaConsumerLogMessageSettings props = ctx.getBean(KafkaConsumerLogMessageSettings.class);
+                    assertThat(props.getSettingsByTopic("demo.events").isValueMaskingEnabled()).isTrue();
                 });
     }
 

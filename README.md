@@ -809,6 +809,22 @@ wiretap:
           VALUE: false                       # don't log payloads on the orders.* family
 ```
 
+A setting left unset in `specific-topic-settings[]` inherits the common value, so an
+override works in both directions — switching masking off where it is globally on, and
+on where it is globally off:
+
+```yaml
+wiretap:
+  kafka-producer-interceptor:
+    enable-value-masking: false            # off globally
+    specific-topic-settings:
+      - match-topic-pattern: "secrets\\..*"
+        enable-value-masking: true         # but on for these topics
+```
+
+`match-topic-pattern` is evaluated with `String.matches`, so it has to match the whole
+topic name: write `orders\\..*`, not `orders`.
+
 Three opt-in masking SPIs are exposed; register a single Spring bean each:
 
 | Interface | Applied to |

@@ -24,6 +24,7 @@ import org.slf4j.MDC;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -198,7 +199,7 @@ public class KafkaLogSink {
 
     private String maskTopic(String topic, KafkaInfoLogMessageSettings effective) {
         if (topic == null) return null;
-        return effective.isEnableTopicMasking() && topicMaskingHandler != null
+        return effective.isTopicMaskingEnabled() && topicMaskingHandler != null
                 ? topicMaskingHandler.maskTopic(topic)
                 : topic;
     }
@@ -208,8 +209,8 @@ public class KafkaLogSink {
                                MessageBodySettings body) {
         if (raw == null) return null;
         String result = raw;
-        if (effective.isEnableValueMasking()
-                && body.isEnableValueMasking()
+        if (effective.isValueMaskingEnabled()
+                && body.isValueMaskingEnabled()
                 && valueMaskingHandler != null) {
             long maskStart = metrics.startSample();
             long maskerStart = metrics.startSample();
@@ -220,9 +221,9 @@ public class KafkaLogSink {
                     new BodyMetricsContext(direction, "kafka", "other"), "mask");
         }
         result = prettyPrintIfJson(direction, result);
-        if (body.isEnableValueTruncating() && result.length() > body.getMaxValueLength()) {
+        if (body.isValueTruncatingEnabled() && result.length() > body.getEffectiveMaxValueLength()) {
             long truncStart = metrics.startSample();
-            result = result.substring(0, body.getMaxValueLength()) + "...[truncated]";
+            result = result.substring(0, body.getEffectiveMaxValueLength()) + "...[truncated]";
             metrics.recordPhase(truncStart,
                     new BodyMetricsContext(direction, "kafka", "other"), "truncate");
         }
@@ -259,7 +260,7 @@ public class KafkaLogSink {
     private Map<String, String> maskHeaders(String topic, Map<String, String> headers,
                                             KafkaInfoLogMessageSettings effective) {
         if (headers == null || headers.isEmpty()) return headers;
-        if (!effective.isEnableHeadersMasking() || headerMaskingHandler == null) {
+        if (!effective.isHeadersMaskingEnabled() || headerMaskingHandler == null) {
             return headers;
         }
         Map<String, String> masked = new LinkedHashMap<>(headers.size());
@@ -269,10 +270,14 @@ public class KafkaLogSink {
         return masked;
     }
 
-    /** Helper for interceptors: collect configured headers from a Kafka {@link Headers} bag. */
-    public Map<String, String> collectHeaders(Headers headers) {
+    /**
+     * Helper for interceptors: collect configured headers from a Kafka {@link Headers} bag.
+     * The topic is needed because the header list can be overridden per topic.
+     */
+    public Map<String, String> collectHeaders(String topic, Headers headers) {
         if (headers == null) return null;
-        Map<String, String> out = HeaderSelector.selectKafka(settings.getHeaders(), headers);
+        Collection<String> configured = settings.getSettingsByTopic(topic).getHeaders();
+        Map<String, String> out = HeaderSelector.selectKafka(configured, headers);
         return out.isEmpty() ? null : out;
     }
 

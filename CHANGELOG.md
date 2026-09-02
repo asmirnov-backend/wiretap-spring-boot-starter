@@ -42,13 +42,29 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 - A per-URL block that does not configure `request-headers` / `response-headers` now
   inherits the common lists instead of falling back to the library defaults
   (`Content-Type`, `X-Forwarded-For`).
+- Kafka per-topic overrides in `specific-topic-settings[]` got the same treatment as the
+  HTTP ones. The three masking toggles were merged with a logical AND, which could only
+  ever turn masking **off**: with `enable-value-masking: false` globally, no topic
+  override could switch it back on. `message-body-settings` and `visibility-settings`
+  merged all-or-nothing against the library defaults, so an explicitly configured value
+  equal to the default was indistinguishable from "not configured", and setting one nested
+  value reset its siblings. Merging is now per field, and an unset value inherits the
+  common one.
+- `specific-topic-settings[].headers` now actually applies, including the `*` wildcard
+  promised for per-topic overrides in `0.1.5`. The header list was read from the common
+  settings inside `KafkaLogSink.collectHeaders`, which the interceptors call before the
+  per-topic lookup happens, so the override was silently dead.
+- A Kafka per-topic block without a `match-topic-pattern` no longer throws on every
+  record. The `NullPointerException` was swallowed by the sink's catch-all, which dropped
+  the whole log line and emitted an error per message instead.
 
 ### Added
 - `enable-request-params-masking` is now declared in the configuration metadata
   (globally and per-URL), so IDEs stop flagging it as an unknown property.
 - Configuration metadata for `wiretap.rest-client-interceptor` and
   `wiretap.web-client-interceptor`, which previously declared only `.enabled` despite
-  supporting the full settings surface.
+  supporting the full settings surface, plus the missing `message-body-settings` and
+  `visibility-settings` container entries on the Kafka blocks.
 
 ### Removed
 - Configuration metadata entries that described nothing: `rest-controllers.extra-info-field-name`
@@ -56,7 +72,10 @@ versions before `1.0.0` are pre-release and the public API may change between mi
   the per-URL type), nested `specific-http-info-settings.specific-http-info-settings`
   (never applied), and `REQUEST_PARAMS` visibility for the WebServiceTemplate interceptor
   (SOAP does not log query parameters). Declared defaults for `max-body-length`,
-  `enable-body-truncating` and header visibility now match the code.
+  `enable-body-truncating` and header visibility now match the code. On the Kafka side,
+  `specific-topic-settings[]` entries no longer declare defaults — an unset value there
+  inherits the common one — and the `DURATION` / `STATUS` visibility keys are no longer
+  described as unused on the consumer side, which the tests contradict.
 
 ### Changed
 - **Breaking (programmatic API only):** `enableUrlMasking` and
@@ -74,6 +93,16 @@ versions before `1.0.0` are pre-release and the public API may change between mi
   return `null` when a setting was not configured. This affects custom `BodyParser`
   implementations and subclasses overriding the `DefaultBodyParser` hooks, since
   `HttpBodySettings` is passed to both. YAML keys and defaults are unchanged.
+- **Breaking (programmatic API only):** the same change on the Kafka side. The three
+  masking toggles on `KafkaInfoLogMessageSettings` and all three `MessageBodySettings`
+  fields are now nullable; read them through `isValueMaskingEnabled()`,
+  `isHeadersMaskingEnabled()`, `isTopicMaskingEnabled()`, `isValueTruncatingEnabled()` and
+  `getEffectiveMaxValueLength()`. `KafkaLogSink.collectHeaders` now takes the topic as its
+  first argument so it can honour per-topic overrides. YAML keys and defaults are
+  unchanged.
+- Kafka per-topic behaviour change worth checking before upgrading: a configuration with
+  masking off globally and on for a topic family previously logged that family unmasked.
+  It now masks, as written.
 
 ## [1.0.1] - 2026-06-16
 
