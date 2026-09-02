@@ -6,7 +6,18 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- `wiretap.kafka-{producer,consumer}-interceptor.key-json-include` filters Kafka
+  records by their key before they reach the log. The option maps a JSON Pointer
+  into the record key to the values (regex) that admit the record: pointers are
+  combined with AND, values behind one pointer with OR. An empty map — the
+  default — logs everything, so `1.0.x` behaviour is unchanged. A key that is
+  `null`, does not parse as JSON, or lacks one of the pointed fields is not
+  logged. The check runs on the raw key, before masking and serialisation, so a
+  rejected record costs one JSON parse; rejected records are counted as
+  `wiretap.kafka.skipped{reason="filter_key"}`. The option is also honoured
+  inside `specific-topic-settings`, where a per-topic filter replaces the common
+  one.
 
 ## [1.0.1] - 2026-06-16
 

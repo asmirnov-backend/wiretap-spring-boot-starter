@@ -1,13 +1,22 @@
 package io.wiretap.kafka.message.settings;
 
+import com.fasterxml.jackson.core.JsonPointer;
 import io.wiretap.kafka.message.settings.body.MessageBodySettings;
 import io.wiretap.util.FieldVisibilityMap;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Data
 public class KafkaInfoLogMessageSettings {
@@ -29,6 +38,18 @@ public class KafkaInfoLogMessageSettings {
     /** Topic patterns to skip from logging entirely. */
     private List<String> excludeTopicPatterns = Collections.emptyList();
 
+    /**
+     * JSON Pointer into the record key mapped to the values (regex) that admit
+     * the record to the log. Empty by default — the whole topic is logged.
+     */
+    private Map<String, List<String>> keyJsonInclude = Collections.emptyMap();
+
+    /** Compiled twin of {@link #keyJsonInclude}, rebuilt whenever the raw map is bound. */
+    @Setter(AccessLevel.NONE)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private KeyJsonInclude keyInclude = new KeyJsonInclude(Collections.emptyMap());
+
     private FieldVisibilityMap<KafkaConfigurableField> visibilitySettings = getDefaultLogSettings();
 
     private List<SpecificKafkaInfoLogMessageSettings> specificTopicSettings = Collections.emptyList();
@@ -45,6 +66,22 @@ public class KafkaInfoLogMessageSettings {
         TIMESTAMP,
         DURATION,
         STATUS
+    }
+
+    public void setKeyJsonInclude(Map<String, List<String>> keyJsonInclude) {
+        this.keyJsonInclude = keyJsonInclude == null ? Collections.emptyMap() : keyJsonInclude;
+        this.keyInclude = compile(this.keyJsonInclude);
+    }
+
+    private KeyJsonInclude compile(Map<String, List<String>> raw) {
+        final Map<JsonPointer, List<Pattern>> compiled = new LinkedHashMap<>(raw.size());
+        for (Map.Entry<String, List<String>> condition : raw.entrySet()) {
+            compiled.put(
+                    JsonPointer.compile(condition.getKey()),
+                    condition.getValue().stream().map(Pattern::compile).collect(Collectors.toList())
+            );
+        }
+        return new KeyJsonInclude(compiled);
     }
 
     private FieldVisibilityMap<KafkaConfigurableField> getDefaultLogSettings() {

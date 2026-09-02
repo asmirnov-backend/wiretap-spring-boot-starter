@@ -775,6 +775,8 @@ wiretap:
       enable-value-masking: true             # combines with the top-level enable-value-masking
     exclude-topic-patterns:
       - ".*\\.internal\\..*"
+    key-json-include:                        # JSON Pointer -> allowed key values (regex)
+      "/requestSource": [ "system-1" ]       # log only records published by system-1
     specific-topic-settings:
       - match-topic-pattern: "orders\\..*"
         visibility-settings:
@@ -876,6 +878,36 @@ wiretap:
     exclude-topic-patterns:
       - "__consumer_offsets"
 ```
+
+### Filtering records by key
+
+One topic often carries traffic from several producers while only part of it is
+worth logging. `key-json-include` keeps a record only when its key parses as
+JSON and every configured JSON Pointer resolves to one of the listed values:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    key-json-include:                        # JSON Pointer -> allowed values (regex)
+      "/requestSource": [ "system-1" ]
+```
+
+- an empty map (the default) logs everything — `1.0.x` behaviour is unchanged;
+- pointers are combined with AND, the values behind one pointer with OR;
+- values are regexes matched against the whole field, so `system-\d+` works and
+  `"system-1"` is the exact-match special case;
+- a key that is `null`, does not parse as JSON, or lacks one of the pointed
+  fields is **not** logged — the include condition is simply not met;
+- the check runs on the **raw** key, before masking and serialisation, so a
+  rejected record costs one JSON parse and nothing else;
+- rejected records are counted as `wiretap.kafka.skipped{reason="filter_key"}`.
+
+A JSON Pointer is used instead of a regex over the raw key string because such a
+regex breaks on field order, whitespace and nesting.
+
+The option lives on the shared Kafka settings, so it is available for
+`wiretap.kafka-producer-interceptor` too, and inside `specific-topic-settings` —
+a per-topic filter replaces the common one, an absent one inherits it.
 
 ### kafka_info fields reference
 
@@ -1147,7 +1179,7 @@ Always published (when enabled and a `MeterRegistry` is present):
 | `wiretap.http.body.capture.failures`| Counter              | `direction`, `client`, `phase`                         | Body-pipeline exceptions, emitted consistently across every client (incoming servlet + all outgoing): `phase=capture` (reading/parsing the body) or `phase=serialize` (rendering the MDC JSON) |
 | `wiretap.kafka.overhead`            | Timer                | `direction` (`producer`/`consumer`), `outcome`         | Full pipeline overhead per Kafka message |
 | `wiretap.kafka.messages`            | Counter              | `direction`, `outcome`                                 | Co-emitted with the timer |
-| `wiretap.kafka.skipped`             | Counter              | `direction`, `reason`                                  | Skip causes (excluded topic / null record) |
+| `wiretap.kafka.skipped`             | Counter              | `direction`, `reason`                                  | Skip causes (excluded topic / key filter / null record) |
 | `wiretap.kafka.message.size`        | DistributionSummary (bytes) | `direction`                                     | Message value size |
 | `wiretap.kafka.body.capture.failures`| Counter             | `direction`, `phase`                                   | Kafka body-pipeline exceptions — Kafka counterpart of `wiretap.http.body.capture.failures` (`phase=capture` masking/parsing, `phase=serialize` JSON rendering) |
 
@@ -1189,7 +1221,7 @@ Opt-in under `wiretap.async-logging.enabled=true`
 - `status`: `2xx` / `3xx` / `4xx` / `5xx` / `other` / `exception` — never the raw status code.
 - `content_type_class`: `json` / `xml` / `text` / `binary` / `other`.
 - `phase`: on `wiretap.body.phase` — `parse` / `mask` / `truncate`; on `wiretap.{http,kafka}.body.capture.failures` — `capture` (reading/parsing the body) / `serialize` (rendering the MDC JSON).
-- `reason`: `exclude_pattern` / `exclude_topic` / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
+- `reason`: `exclude_pattern` / `exclude_topic` / `filter_key` (Kafka record rejected by `key-json-include`) / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
 
 ### Scraping
 

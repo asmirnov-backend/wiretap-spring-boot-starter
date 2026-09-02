@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class KafkaConsumerLogMessageSettingsTest {
@@ -37,6 +39,25 @@ class KafkaConsumerLogMessageSettingsTest {
                     assertThat(props.getMessageBodySettings().getMaxValueLength()).isEqualTo(128);
                     assertThat(props.getExcludeTopicPatterns()).containsExactly("__consumer_offsets");
                 });
+    }
+
+    @Test
+    void keyJsonIncludeIsEmptyByDefault() {
+        runner.run(ctx -> assertThat(ctx.getBean(KafkaConsumerLogMessageSettings.class).getKeyJsonInclude())
+                .as("default settings should log every record")
+                .isEmpty());
+    }
+
+    @Test
+    void keyJsonIncludeBindsFromProperties() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-consumer-interceptor.key-json-include[/requestSource][0]=system-1",
+                        "wiretap.kafka-consumer-interceptor.key-json-include[/requestSource][1]=system-2"
+                )
+                .run(ctx -> assertThat(ctx.getBean(KafkaConsumerLogMessageSettings.class).getKeyJsonInclude())
+                        .as("key-json-include should bind as pointer -> values")
+                        .containsEntry("/requestSource", List.of("system-1", "system-2")));
     }
 
     @EnableConfigurationProperties(KafkaConsumerLogMessageSettings.class)

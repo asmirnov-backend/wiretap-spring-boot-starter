@@ -10,6 +10,7 @@ import io.wiretap.kafka.message.KafkaValueMaskingHandler;
 import io.wiretap.kafka.message.settings.KafkaAccessFieldNames;
 import io.wiretap.kafka.message.settings.KafkaInfoLogMessageSettings;
 import io.wiretap.kafka.message.settings.KafkaInfoLogMessageSettings.KafkaConfigurableField;
+import io.wiretap.kafka.message.settings.KeyJsonInclude;
 import io.wiretap.kafka.message.settings.body.MessageBodySettings;
 import io.wiretap.metrics.BodyMetricsContext;
 import io.wiretap.metrics.NoOpWiretapMetrics;
@@ -83,6 +84,30 @@ public class KafkaLogSink {
     }
 
     /**
+     * @return {@code true} if the record itself is allowed into the log by the
+     *         {@code key-json-include} condition configured for its topic. An
+     *         empty condition (the default) admits everything; a key that is
+     *         missing, not JSON, or lacking one of the configured pointers is
+     *         never logged. Runs on the raw key, before masking and
+     *         serialisation, so a rejected record costs one JSON parse.
+     */
+    public boolean isRecordLogged(KafkaMessageInfo info) {
+        if (info == null || info.getTopic() == null) return false;
+        final KeyJsonInclude include = settings.getSettingsByTopic(info.getTopic()).getKeyInclude();
+        return include.isEmpty() || include.matches(parseKey(info.getKey()));
+    }
+
+    @Nullable
+    private JsonNode parseKey(String key) {
+        if (key == null) return null;
+        try {
+            return mapper.readTree(key);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /**
      * Emits a {@code kafka_info} JSON object via MDC + {@code log.info(...)}.
      * Applies masking, truncation and per-topic overrides.
      */
@@ -95,6 +120,10 @@ public class KafkaLogSink {
             }
             if (!isTopicLogged(info.getTopic())) {
                 metrics.recordKafkaSkipped(direction, "exclude_topic");
+                return;
+            }
+            if (!isRecordLogged(info)) {
+                metrics.recordKafkaSkipped(direction, "filter_key");
                 return;
             }
 

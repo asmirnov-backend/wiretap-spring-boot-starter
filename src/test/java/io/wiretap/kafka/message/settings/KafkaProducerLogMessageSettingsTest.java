@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class KafkaProducerLogMessageSettingsTest {
@@ -59,6 +61,34 @@ class KafkaProducerLogMessageSettingsTest {
                     assertThat(effective.getVisibilitySettings().get(KafkaConfigurableField.VALUE)).isFalse();
                     assertThat(props.getSettingsByTopic("payments.events").getVisibilitySettings().get(KafkaConfigurableField.VALUE)).isTrue();
                 });
+    }
+
+    @Test
+    void specificTopicSettingsInheritCommonKeyJsonInclude() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-producer-interceptor.key-json-include[/requestSource][0]=system-1",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].match-topic-pattern=orders\\..*",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].visibility-settings.VALUE=false"
+                )
+                .run(ctx -> assertThat(ctx.getBean(KafkaProducerLogMessageSettings.class)
+                        .getSettingsByTopic("orders.events").getKeyJsonInclude())
+                        .as("per-topic override without a filter should keep the common one")
+                        .containsEntry("/requestSource", List.of("system-1")));
+    }
+
+    @Test
+    void specificTopicSettingsOverrideCommonKeyJsonInclude() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-producer-interceptor.key-json-include[/requestSource][0]=system-1",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].match-topic-pattern=orders\\..*",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].key-json-include[/tenant][0]=acme"
+                )
+                .run(ctx -> assertThat(ctx.getBean(KafkaProducerLogMessageSettings.class)
+                        .getSettingsByTopic("orders.events").getKeyJsonInclude())
+                        .as("per-topic filter should replace the common one")
+                        .containsOnlyKeys("/tenant"));
     }
 
     @EnableConfigurationProperties(KafkaProducerLogMessageSettings.class)

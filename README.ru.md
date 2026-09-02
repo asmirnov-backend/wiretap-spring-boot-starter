@@ -780,6 +780,8 @@ wiretap:
       enable-value-masking: true             # комбинируется с enable-value-masking выше
     exclude-topic-patterns:
       - ".*\\.internal\\..*"
+    key-json-include:                        # JSON Pointer -> допустимые значения ключа (regex)
+      "/requestSource": [ "system-1" ]       # логировать только записи от system-1
     specific-topic-settings:
       - match-topic-pattern: "orders\\..*"
         visibility-settings:
@@ -881,6 +883,37 @@ wiretap:
     exclude-topic-patterns:
       - "__consumer_offsets"
 ```
+
+### Фильтрация записей по ключу
+
+В один топик часто пишут несколько систем, а логировать нужно только часть
+трафика. `key-json-include` оставляет запись, только если её ключ парсится как
+JSON и каждый указанный JSON Pointer разрешается в одно из перечисленных
+значений:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    key-json-include:                        # JSON Pointer -> допустимые значения (regex)
+      "/requestSource": [ "system-1" ]
+```
+
+- пустая карта (по умолчанию) логирует всё — поведение `1.0.x` не меняется;
+- указатели комбинируются по AND, значения внутри одного указателя — по OR;
+- значения трактуются как regex и матчатся целиком, поэтому `system-\d+`
+  работает, а `"system-1"` — частный случай точного совпадения;
+- ключ `null`, ключ не в JSON или отсутствие поля по указателю → запись **не**
+  логируется: include-условие просто не выполнено;
+- проверка идёт по **сырому** ключу, до маскирования и сериализации, поэтому
+  отброшенная запись стоит одного парсинга JSON и больше ничего;
+- отброшенные записи считаются в `wiretap.kafka.skipped{reason="filter_key"}`.
+
+JSON Pointer выбран вместо regex по сырой строке ключа, потому что такой regex
+ломается от порядка полей, пробелов и вложенности.
+
+Опция живёт в общих Kafka-настройках, поэтому доступна и для
+`wiretap.kafka-producer-interceptor`, и внутри `specific-topic-settings` —
+per-topic фильтр заменяет общий, а его отсутствие означает наследование общего.
 
 ### Справочник полей `kafka_info`
 
@@ -1155,7 +1188,7 @@ wiretap:
 | `wiretap.http.body.capture.failures` | Counter                      | `direction`, `client`, `phase`                                      | Исключения в пайплайне тела, пишутся единообразно во всех клиентах (входящий servlet + все исходящие): `phase=capture` (чтение/парсинг тела) или `phase=serialize` (рендеринг JSON в MDC) |
 | `wiretap.kafka.overhead`             | Timer                        | `direction` (`producer`/`consumer`), `outcome`                      | Полный overhead pipeline на одно Kafka-сообщение |
 | `wiretap.kafka.messages`             | Counter                      | `direction`, `outcome`                                              | Идёт парой с Timer |
-| `wiretap.kafka.skipped`              | Counter                      | `direction`, `reason`                                               | Причины skip (исключённый топик / null record) |
+| `wiretap.kafka.skipped`              | Counter                      | `direction`, `reason`                                               | Причины skip (исключённый топик / фильтр по ключу / null record) |
 | `wiretap.kafka.message.size`         | DistributionSummary (bytes)  | `direction`                                                         | Размер value |
 | `wiretap.kafka.body.capture.failures`| Counter                      | `direction`, `phase`                                                | Исключения в пайплайне тела Kafka — аналог `wiretap.http.body.capture.failures` (`phase=capture` маскирование/парсинг, `phase=serialize` рендеринг JSON) |
 
@@ -1197,7 +1230,7 @@ wiretap:
 - `status`: `2xx` / `3xx` / `4xx` / `5xx` / `other` / `exception` — никогда не сырое значение кода.
 - `content_type_class`: `json` / `xml` / `text` / `binary` / `other`.
 - `phase`: на `wiretap.body.phase` — `parse` / `mask` / `truncate`; на `wiretap.{http,kafka}.body.capture.failures` — `capture` (чтение/парсинг тела) / `serialize` (рендеринг JSON в MDC).
-- `reason`: `exclude_pattern` / `exclude_topic` / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
+- `reason`: `exclude_pattern` / `exclude_topic` / `filter_key` (запись Kafka отброшена `key-json-include`) / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
 
 ### Сбор метрик
 

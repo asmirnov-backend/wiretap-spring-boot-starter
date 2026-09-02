@@ -809,6 +809,11 @@
       "description": "Topic name regex patterns to skip from logging entirely."
     },
     {
+      "name": "wiretap.kafka-producer-interceptor.key-json-include",
+      "type": "java.util.Map<java.lang.String,java.util.List<java.lang.String>>",
+      "description": "JSON Pointer into the record key mapped to the values (regex) that admit the record to the log. Pointers are combined with AND, values behind one pointer with OR. Empty by default, which logs every record; a key that is null, not JSON, or missing a pointed field is not logged."
+    },
+    {
       "name": "wiretap.kafka-producer-interceptor.enable-value-masking",
       "type": "java.lang.Boolean",
       "description": "Toggle masking of key and value via KafkaValueMaskingHandler beans.",
@@ -860,6 +865,11 @@
       "name": "wiretap.kafka-consumer-interceptor.exclude-topic-patterns",
       "type": "java.util.List<java.lang.String>",
       "description": "Topic name regex patterns to skip from logging entirely."
+    },
+    {
+      "name": "wiretap.kafka-consumer-interceptor.key-json-include",
+      "type": "java.util.Map<java.lang.String,java.util.List<java.lang.String>>",
+      "description": "JSON Pointer into the record key mapped to the values (regex) that admit the record to the log. Pointers are combined with AND, values behind one pointer with OR. Empty by default, which logs every record; a key that is null, not JSON, or missing a pointed field is not logged."
     },
     {
       "name": "wiretap.kafka-consumer-interceptor.enable-value-masking",
