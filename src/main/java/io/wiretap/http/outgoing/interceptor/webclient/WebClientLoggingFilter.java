@@ -135,16 +135,28 @@ public class WebClientLoggingFilter implements ExchangeFilterFunction {
     public Mono<ClientResponse> filter(ClientRequest request, ExchangeFunction next) {
         String requestUrl = request.url().toString();
 
-        if (settings.getExcludeRequestPatterns().stream().anyMatch(requestUrl::matches)) {
-            metrics.recordHttpSkipped(DIRECTION, CLIENT, "exclude_pattern");
+        final HttpInfoLogMessageSettings urlSettings;
+        final boolean captureRequestBody;
+        final boolean captureResponseBody;
+        final int maxBodyLength;
+        try {
+            if (settings.getExcludeRequestPatterns().stream().anyMatch(requestUrl::matches)) {
+                metrics.recordHttpSkipped(DIRECTION, CLIENT, "exclude_pattern");
+                return next.exchange(request);
+            }
+
+            urlSettings = settings.getRequestSettingsByUrl(requestUrl);
+            FieldVisibilityMap<HttpConfigurableField> visibility = urlSettings.getVisibilitySettings();
+            captureRequestBody = Boolean.TRUE.equals(visibility.get(REQUEST_BODY));
+            captureResponseBody = Boolean.TRUE.equals(visibility.get(RESPONSE_BODY));
+            maxBodyLength = urlSettings.getHttpBodySettings().getEffectiveMaxBodyLength();
+        } catch (Exception e) {
+            // Unlike the other interceptors this runs outside any try/catch, so a bad
+            // pattern here would fail the HTTP call itself. Skip logging, not the request.
+            log.error("Error while resolving WebClient log settings, skipping capture", e);
+            metrics.recordHttpBodyCaptureFailure(DIRECTION, CLIENT, "capture");
             return next.exchange(request);
         }
-
-        HttpInfoLogMessageSettings urlSettings = settings.getRequestSettingsByUrl(requestUrl);
-        FieldVisibilityMap<HttpConfigurableField> visibility = urlSettings.getVisibilitySettings();
-        boolean captureRequestBody = Boolean.TRUE.equals(visibility.get(REQUEST_BODY));
-        boolean captureResponseBody = Boolean.TRUE.equals(visibility.get(RESPONSE_BODY));
-        int maxBodyLength = urlSettings.getHttpBodySettings().getMaxBodyLength();
 
         AtomicReference<String> capturedRequestBody = new AtomicReference<>("");
         long startTime = System.currentTimeMillis();
@@ -322,10 +334,10 @@ public class WebClientLoggingFilter implements ExchangeFilterFunction {
 
             HttpMessageInfo info = HttpMessageInfo.builder()
                     .requestDirection(OUTGOING)
-                    .requestUrl(Boolean.TRUE.equals(visibility.get(REQUEST_URL)) ? maskedUrl(requestUrl) : null)
+                    .requestUrl(Boolean.TRUE.equals(visibility.get(REQUEST_URL)) ? maskedUrl(requestUrl, specificSettings) : null)
                     .httpMethod(Optional.ofNullable(request.method()).map(HttpMethod::name).orElse(null))
                     .requestHeaders(visibility.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
-                    .requestParams(maskRequestParams(visibility.getVisible(REQUEST_PARAMS, requestParamsSupplier)))
+                    .requestParams(maskRequestParams(visibility.getVisible(REQUEST_PARAMS, requestParamsSupplier), specificSettings))
                     .requestBody(getStringBody(visibility.getVisible(REQUEST_BODY, requestBodySupplier)))
                     .requestBodyLength(request.headers().getContentLength())
                     .responseHeaders(visibility.getVisible(RESPONSE_HEADERS, responseHeadersSupplier))
@@ -361,10 +373,10 @@ public class WebClientLoggingFilter implements ExchangeFilterFunction {
 
             HttpMessageInfo info = HttpMessageInfo.builder()
                     .requestDirection(OUTGOING)
-                    .requestUrl(Boolean.TRUE.equals(visibility.get(REQUEST_URL)) ? maskedUrl(requestUrl) : null)
+                    .requestUrl(Boolean.TRUE.equals(visibility.get(REQUEST_URL)) ? maskedUrl(requestUrl, specificSettings) : null)
                     .httpMethod(Optional.ofNullable(request.method()).map(HttpMethod::name).orElse(null))
                     .requestHeaders(visibility.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
-                    .requestParams(maskRequestParams(visibility.getVisible(REQUEST_PARAMS, requestParamsSupplier)))
+                    .requestParams(maskRequestParams(visibility.getVisible(REQUEST_PARAMS, requestParamsSupplier), specificSettings))
                     .requestBody(getStringBody(visibility.getVisible(REQUEST_BODY, requestBodySupplier)))
                     .requestBodyLength(request.headers().getContentLength())
                     .elapsedTime(System.currentTimeMillis() - startTime)
@@ -384,7 +396,7 @@ public class WebClientLoggingFilter implements ExchangeFilterFunction {
                     .writeValueAsString(info.toMap(httpFieldNames));
             metrics.recordJsonSerialization(serStart, "http", DIRECTION, CLIENT);
             try (MDC.MDCCloseable ignored = MDC.putCloseable(HTTP_INFO_MDC_NAME, json)) {
-                log.info("Captured outgoing webclient request {}", maskedUrl(info.getRequestUrl()));
+                log.info("Captured outgoing webclient request {}", info.getRequestUrl());
             }
         } catch (JsonProcessingException e) {
             log.error("Error serialising WebClient http-info", e);
@@ -392,15 +404,15 @@ public class WebClientLoggingFilter implements ExchangeFilterFunction {
         }
     }
 
-    private String maskedUrl(String url) {
+    private String maskedUrl(String url, HttpInfoLogMessageSettings urlSettings) {
         if (url == null) return null;
-        return settings.isEnableUrlMasking() && urlMaskingHandler != null
+        return urlSettings.isUrlMaskingEnabled() && urlMaskingHandler != null
                 ? urlMaskingHandler.maskUrl(url) : url;
     }
 
-    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params) {
+    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params, HttpInfoLogMessageSettings urlSettings) {
         if (params == null
-                || !settings.isEnableRequestParamsMasking()
+                || !urlSettings.isRequestParamsMaskingEnabled()
                 || paramsMaskingHandler == null) {
             return params;
         }

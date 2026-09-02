@@ -546,9 +546,25 @@ public class CardLimitsMasker implements HttpBodyMaskingHandler {
 ```
 
 Если бин для контекста не зарегистрирован, данные проходят без изменений независимо от
-значения флага. Точечное управление через `specific-http-info-settings[].enable-body-masking`
-(и `enable-url-masking`) работает по тому же правилу — хендлер вызывается только если
-и флаг, и бин присутствуют.
+значения флага — хендлер вызывается только если присутствуют и флаг, и бин.
+
+`enable-url-masking` и `enable-request-params-masking` можно переопределять точечно,
+для конкретного URL. Флаг, не заданный в `specific-http-info-settings[]`, наследуется
+из общего блока, поэтому переопределение работает в обе стороны — и выключить там,
+где глобально включено, и включить там, где глобально выключено:
+
+```yaml
+wiretap:
+  rest-controllers:
+    enable-request-params-masking: false   # глобально выключено
+    specific-http-info-settings:
+      - match-url-pattern: ".*/payments/.*"
+        enable-request-params-masking: true   # но включено на этих URL
+```
+
+`match-url-pattern` матчится через `String.matches`, то есть по всей строке целиком:
+пишите `.*/payments/.*`, а не `/payments/`. Для входящих запросов сопоставляется путь
+(`/api/echo`), для исходящих — полный URL со схемой и портом.
 
 Отключить маскирование сообщений глобально, даже при наличии бина:
 
@@ -565,6 +581,18 @@ wiretap:
     exclude-request-patterns:
       - "/actuator/.*"
       - "/health"
+```
+
+Паттерны матчатся через `String.matches`, то есть должны покрывать всю строку целиком.
+Для входящих запросов эта строка — путь (`/actuator/health`), для исходящих клиентов —
+полный URL, поэтому аналогичная настройка в `wiretap.rest-template-interceptor` и
+соседних требует ведущего wildcard:
+
+```yaml
+wiretap:
+  rest-template-interceptor:
+    exclude-request-patterns:
+      - ".*/actuator/.*"
 ```
 
 ### Захват тел входящих запросов

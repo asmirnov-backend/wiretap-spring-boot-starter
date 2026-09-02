@@ -204,10 +204,10 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(Request request) {
         return Optional.of(
                 HttpMessageInfo.builder()
                         .requestDirection(OUTGOING)
-                        .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl) : null)
+                        .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl, specificRestLogSettings) : null)
                         .httpMethod(request.httpMethod().name())
                         .requestHeaders(visibilityMap.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
-                        .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier)))
+                        .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier), specificRestLogSettings))
                         .requestBody(requestBodyString)
                         .requestBodyLength(getContentLength(request.headers()))
                         .build()
@@ -286,14 +286,14 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(Request request) {
         }
     }
 
-    private String getMaskedRequestUrl(String notMaskedUrl) {
-        return commonRestLogSettings.isEnableUrlMasking() && urlMaskingHandler != null
+    private String getMaskedRequestUrl(String notMaskedUrl, HttpInfoLogMessageSettings settings) {
+        return settings.isUrlMaskingEnabled() && urlMaskingHandler != null
                 ? urlMaskingHandler.maskUrl(notMaskedUrl) : notMaskedUrl;
     }
 
-    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params) {
+    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params, HttpInfoLogMessageSettings settings) {
         if (params == null
-                || !commonRestLogSettings.isEnableRequestParamsMasking()
+                || !settings.isRequestParamsMaskingEnabled()
                 || paramsMaskingHandler == null) {
             return params;
         }
@@ -338,7 +338,7 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(Request request) {
             metrics.recordJsonSerialization(serStart, "http", DIRECTION, CLIENT);
 
             try (final MDC.MDCCloseable ignored = MDC.putCloseable(HTTP_INFO_MDC_NAME, stringLogMessage)) {
-                log.info("Captured outgoing feign-client request {}", getMaskedRequestUrl(logMessage.getRequestUrl()));
+                log.info("Captured outgoing feign-client request {}", logMessage.getRequestUrl());
             }
         } catch (JacksonException e) {
             log.error("Error while logging feign-client http-info...", e);

@@ -6,7 +6,74 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Fixed
+- `specific-http-info-settings[].enable-url-masking` and
+  `specific-http-info-settings[].enable-request-params-masking` now actually apply.
+  Both flags were documented as per-URL overrides but were dead: the per-URL merge
+  never copied them, so the resolved settings always fell back to the constructor
+  default, and every call site read the flag from the common settings block rather
+  than from the settings resolved for the request URL. An override could neither
+  turn masking off for a URL where it is globally on, nor turn it on where it is
+  globally off. Fixed across all logging points — inbound access logs (including
+  the `message` field, which previously snapshotted the flag once at startup and
+  could disagree with `http_info.request_url`), RestTemplate, RestClient, Feign,
+  WebClient and WebServiceTemplate.
+
+- Per-URL overrides now merge field by field instead of all-or-nothing. Previously an
+  override was compared against the library defaults as a whole object, which broke both
+  directions: a nested value that happened to equal the default was indistinguishable
+  from "not configured" (so `enable-body-masking: false` could never turn masking off for
+  a URL, and the documented "hide request bodies globally, show them on one endpoint"
+  example did nothing), and configuring a single nested value made the override win
+  outright, silently resetting its siblings to library defaults rather than keeping the
+  global ones.
+- `exclude-request-patterns` now matches inbound requests again. The access-log filter
+  tested the patterns against the request line (`GET /actuator/health HTTP/1.1`) rather
+  than the URI, so no path pattern could ever match — including the built-in
+  `/actuator/.*` default. Every actuator call has been landing in the access log.
+- Masking is no longer applied twice to the logged request URL. The outgoing interceptors
+  masked the URL when building `http_info` and masked the already-masked value again when
+  writing the log message; a non-idempotent handler produced a doubly-transformed URL.
+  The same path passed `null` into the handler when `REQUEST_URL` visibility was off.
+- A malformed `match-url-pattern` or `exclude-request-patterns` entry no longer breaks the
+  HTTP call itself on `WebClient`. Settings resolution happens outside the try/catch that
+  guards the other interceptors, so the exception propagated into the reactive chain.
+  A per-URL block without a pattern is now skipped instead of throwing on every request.
+- A per-URL block that does not configure `request-headers` / `response-headers` now
+  inherits the common lists instead of falling back to the library defaults
+  (`Content-Type`, `X-Forwarded-For`).
+
+### Added
+- `enable-request-params-masking` is now declared in the configuration metadata
+  (globally and per-URL), so IDEs stop flagging it as an unknown property.
+- Configuration metadata for `wiretap.rest-client-interceptor` and
+  `wiretap.web-client-interceptor`, which previously declared only `.enabled` despite
+  supporting the full settings surface.
+
+### Removed
+- Configuration metadata entries that described nothing: `rest-controllers.extra-info-field-name`
+  (no such property), `specific-http-info-settings.additional-request-headers` (not part of
+  the per-URL type), nested `specific-http-info-settings.specific-http-info-settings`
+  (never applied), and `REQUEST_PARAMS` visibility for the WebServiceTemplate interceptor
+  (SOAP does not log query parameters). Declared defaults for `max-body-length`,
+  `enable-body-truncating` and header visibility now match the code.
+
+### Changed
+- **Breaking (programmatic API only):** `enableUrlMasking` and
+  `enableRequestParamsMasking` on `HttpInfoLogMessageSettings` changed from
+  `boolean` to `Boolean`, so an unset override can be told apart from an explicit
+  `true` and inherit the common value. The generated accessors are now
+  `getEnableUrlMasking()` / `getEnableRequestParamsMasking()`; use
+  `isUrlMaskingEnabled()` / `isRequestParamsMaskingEnabled()` to read the effective
+  value. YAML keys and the `true` default are unchanged, so configuration files
+  need no edits.
+- **Breaking (programmatic API only):** the four `HttpBodySettings` fields changed from
+  `boolean`/`int` to `Boolean`/`Integer` for the same reason. Read the effective values
+  through `isBodyMaskingEnabled()`, `isBodyTruncatingEnabled()`,
+  `getEffectiveMaxFieldLength()` and `getEffectiveMaxBodyLength()` — the raw getters may
+  return `null` when a setting was not configured. This affects custom `BodyParser`
+  implementations and subclasses overriding the `DefaultBodyParser` hooks, since
+  `HttpBodySettings` is passed to both. YAML keys and defaults are unchanged.
 
 ## [1.0.1] - 2026-06-16
 

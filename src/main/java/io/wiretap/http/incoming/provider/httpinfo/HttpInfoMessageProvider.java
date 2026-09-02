@@ -131,7 +131,7 @@ public class HttpInfoMessageProvider extends AbstractFieldJsonProvider<IAccessEv
 
             final HttpMessageInfo message = HttpMessageInfo.builder()
                     .requestDirection(RequestDirection.INCOMING)
-                    .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl) : null)
+                    .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl, specificLogSettings) : null)
                     .httpMethod(event.getMethod())
                     .protocol(event.getProtocol())
                     .elapsedTime(event.getElapsedTime())
@@ -141,7 +141,7 @@ public class HttpInfoMessageProvider extends AbstractFieldJsonProvider<IAccessEv
                     .responseBody(responseBodyString)
                     .responseBodyLength(responseBodyLengthWithFallback(event, buffered)) // capture the original (pre-processing) body length
                     .xmlBodyType(getXmlType(event.getRequestContent(), isXmlBody))
-                    .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier)))
+                    .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier), specificLogSettings))
                     .requestHeaders(visibilityMap.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
                     .responseHeaders(visibilityMap.getVisible(RESPONSE_HEADERS, responseHeadersSupplier))
                     .build();
@@ -201,14 +201,14 @@ public class HttpInfoMessageProvider extends AbstractFieldJsonProvider<IAccessEv
         return buffered != null ? buffered.responseBody() : null;
     }
 
-    private String getMaskedRequestUrl(String notMaskedUrl) {
-        return logSettings.isEnableUrlMasking() && urlMaskingHandler != null
+    private String getMaskedRequestUrl(String notMaskedUrl, HttpInfoLogMessageSettings settings) {
+        return settings.isUrlMaskingEnabled() && urlMaskingHandler != null
                 ? urlMaskingHandler.maskUrl(notMaskedUrl) : notMaskedUrl;
     }
 
-    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params) {
+    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params, HttpInfoLogMessageSettings settings) {
         if (params == null
-                || !logSettings.isEnableRequestParamsMasking()
+                || !settings.isRequestParamsMaskingEnabled()
                 || paramsMaskingHandler == null) {
             return params;
         }

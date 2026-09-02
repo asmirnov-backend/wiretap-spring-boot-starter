@@ -229,7 +229,7 @@ public class WebServiceTemplateLoggingInterceptor extends ClientInterceptorAdapt
 
         return HttpMessageInfo.builder()
                 .requestDirection(OUTGOING)
-                .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestURL) : null)
+                .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestURL, specificLogSettings) : null)
                 .elapsedTime(duration)
                 .returnCode(getSoapRequestHttpStatus(connection))
                 .requestHeaders(visibilityMap.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
@@ -300,12 +300,12 @@ public class WebServiceTemplateLoggingInterceptor extends ClientInterceptorAdapt
         metrics.recordJsonSerialization(serStart, "http", DIRECTION, CLIENT);
 
         try (final MDC.MDCCloseable ignored = MDC.putCloseable(CUSTOM_LOG_MESSAGE, stringLogMessage)) {
-            log.info("Captured outgoing soap request {}", getMaskedRequestUrl(logMessage.getRequestUrl()));
+            log.info("Captured outgoing soap request {}", logMessage.getRequestUrl());
         }
     }
 
-    private String getMaskedRequestUrl(String notMaskedUrl) {
-        return soapLogSettings.isEnableUrlMasking() && urlMaskingHandler != null
+    private String getMaskedRequestUrl(String notMaskedUrl, HttpInfoLogMessageSettings settings) {
+        return settings.isUrlMaskingEnabled() && urlMaskingHandler != null
                 ? urlMaskingHandler.maskUrl(notMaskedUrl) : notMaskedUrl;
     }
 

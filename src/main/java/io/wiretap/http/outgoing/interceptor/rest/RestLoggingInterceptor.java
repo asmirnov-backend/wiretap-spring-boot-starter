@@ -211,10 +211,10 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(byte[] bodyBytes, HttpReque
         return Optional.of(
                 HttpMessageInfo.builder()
                         .requestDirection(OUTGOING)
-                        .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl) : null)
+                        .requestUrl(Boolean.TRUE.equals(visibilityMap.get(REQUEST_URL)) ? getMaskedRequestUrl(requestUrl, specificRestLogSettings) : null)
                         .httpMethod(Optional.ofNullable(httpRequest.getMethod()).map(HttpMethod::name).orElse(null))
                         .requestHeaders(visibilityMap.getVisible(REQUEST_HEADERS, requestHeadersSupplier))
-                        .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier)))
+                        .requestParams(maskRequestParams(visibilityMap.getVisible(REQUEST_PARAMS, requestParamsSupplier), specificRestLogSettings))
                         .requestBody(requestBodyString)
                         .requestBodyLength(httpRequest.getHeaders().getContentLength())
                         .xmlBodyType(getXmlType(originIncomingRequestBodyString, isXmlRequestBody))
@@ -271,7 +271,7 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(byte[] bodyBytes, HttpReque
             metrics.recordJsonSerialization(serStart, "http", DIRECTION, clientTag);
 
             try (final MDC.MDCCloseable ignored = MDC.putCloseable(HTTP_INFO_MDC_NAME, stringLogMessage)) {
-                log.info("Captured outgoing rest request {}", getMaskedRequestUrl(logMessage.getRequestUrl()));
+                log.info("Captured outgoing rest request {}", logMessage.getRequestUrl());
             }
         } catch (JsonProcessingException e) {
             log.error("Error while logging {} http-info...", clientName, e);
@@ -279,14 +279,14 @@ private Optional<HttpMessageInfo> getRequestHttpInfo(byte[] bodyBytes, HttpReque
         }
     }
 
-    private String getMaskedRequestUrl(String notMaskedUrl) {
-        return commonRestLogSettings.isEnableUrlMasking() && urlMaskingHandler != null
+    private String getMaskedRequestUrl(String notMaskedUrl, HttpInfoLogMessageSettings settings) {
+        return settings.isUrlMaskingEnabled() && urlMaskingHandler != null
                 ? urlMaskingHandler.maskUrl(notMaskedUrl) : notMaskedUrl;
     }
 
-    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params) {
+    private Map<String, List<String>> maskRequestParams(Map<String, List<String>> params, HttpInfoLogMessageSettings settings) {
         if (params == null
-                || !commonRestLogSettings.isEnableRequestParamsMasking()
+                || !settings.isRequestParamsMaskingEnabled()
                 || paramsMaskingHandler == null) {
             return params;
         }

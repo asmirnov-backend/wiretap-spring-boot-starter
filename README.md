@@ -544,9 +544,25 @@ public class CardLimitsMasker implements HttpBodyMaskingHandler {
 ```
 
 When no bean is registered for a context, data passes through unchanged regardless of
-the flag value. Per-URL control via `specific-http-info-settings[].enable-body-masking`
-(and `enable-url-masking`) follows the same rule — the handler is only called when both
-the flag and the bean are present.
+the flag value — the handler is only called when both the flag and the bean are present.
+
+`enable-url-masking` and `enable-request-params-masking` can be overridden per URL.
+A flag left unset in `specific-http-info-settings[]` inherits the common value, so an
+override works in both directions — switching masking off where it is globally on, and
+on where it is globally off:
+
+```yaml
+wiretap:
+  rest-controllers:
+    enable-request-params-masking: false   # off globally
+    specific-http-info-settings:
+      - match-url-pattern: ".*/payments/.*"
+        enable-request-params-masking: true   # but on for these URLs
+```
+
+`match-url-pattern` is evaluated with `String.matches`, so it has to match the whole
+string: write `.*/payments/.*`, not `/payments/`. Inbound requests are matched on the
+path (`/api/echo`), outbound ones on the full URL including scheme and port.
 
 Disable message masking globally even when a bean is registered:
 
@@ -563,6 +579,18 @@ wiretap:
     exclude-request-patterns:
       - "/actuator/.*"
       - "/health"
+```
+
+Patterns are matched with `String.matches`, so they have to cover the whole string.
+For inbound requests that string is the path (`/actuator/health`); for outgoing clients
+it is the full URL, so the equivalent entry under `wiretap.rest-template-interceptor`
+and friends needs a leading wildcard:
+
+```yaml
+wiretap:
+  rest-template-interceptor:
+    exclude-request-patterns:
+      - ".*/actuator/.*"
 ```
 
 ### Capturing inbound bodies

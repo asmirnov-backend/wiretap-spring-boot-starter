@@ -20,7 +20,9 @@ public class LazyIncomingRequestLogFilter extends Filter<IAccessEvent> {
 
     @Override
     public FilterReply decide(IAccessEvent iAccessEvent) {
-        final String requestURL = iAccessEvent.getRequestURL();
+        // getRequestURL() is the request line ("GET /actuator/health HTTP/1.1"), which no
+        // path pattern can match; the URI is what the exclude patterns are written against.
+        final String requestURL = iAccessEvent.getRequestURI();
         if (requestURL == null || requestURL.isEmpty() || "-".equals(requestURL)) {
             return FilterReply.DENY;
         }

@@ -15,7 +15,7 @@ public class MessageProvider extends AbstractFieldJsonProvider<IAccessEvent> {
 
     private static final String MESSAGE_PATTERN = "Captured incoming http request %s";
 
-    private final boolean isUrlMaskingEnabled;
+    private final RestControllerLogMessageSettings settings;
     @Nullable
     private final HttpUrlMaskingHandler urlMaskingHandler;
 
@@ -26,7 +26,7 @@ public class MessageProvider extends AbstractFieldJsonProvider<IAccessEvent> {
     ) {
         super();
         setFieldName(fieldNames.getMessage());
-        this.isUrlMaskingEnabled = settings.isEnableUrlMasking();
+        this.settings = settings;
         this.urlMaskingHandler = urlMaskingHandler;
     }
 
@@ -37,9 +37,12 @@ public class MessageProvider extends AbstractFieldJsonProvider<IAccessEvent> {
 
     @Override
     public void writeTo(JsonGenerator generator, IAccessEvent iAccessEvent) {
+        final String requestUri = iAccessEvent.getRequestURI();
+        // Resolve per-URL overrides so this message stays consistent with http_info.request_url.
+        final boolean maskingEnabled = settings.getRequestSettingsByUrl(requestUri).isUrlMaskingEnabled();
         final String message = String.format(
                 MESSAGE_PATTERN,
-                isUrlMaskingEnabled ? getMasked(iAccessEvent.getRequestURI()) : iAccessEvent.getRequestURI()
+                maskingEnabled ? getMasked(requestUri) : requestUri
         );
         generator.writeName(getFieldName());
         generator.writeString(message);

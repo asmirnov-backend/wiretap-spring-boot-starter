@@ -118,8 +118,8 @@ public class DefaultBodyParser implements BodyParser {
         );
 
         if (processedBody != null &&
-                processedBody.toString().length() > bodySettings.getMaxBodyLength()) {
-            return StringNode.valueOf(String.format(LIMIT_EXCEEDED, bodySettings.getMaxBodyLength()));
+                processedBody.toString().length() > bodySettings.getEffectiveMaxBodyLength()) {
+            return StringNode.valueOf(String.format(LIMIT_EXCEEDED, bodySettings.getEffectiveMaxBodyLength()));
         }
 
         return processedBody;
@@ -145,8 +145,8 @@ public class DefaultBodyParser implements BodyParser {
         );
 
         if (processedBody != null &&
-                processedBody.toString().length() > httpBodySettings.getMaxBodyLength()) {
-            return StringNode.valueOf(String.format(LIMIT_EXCEEDED, httpBodySettings.getMaxBodyLength()));
+                processedBody.toString().length() > httpBodySettings.getEffectiveMaxBodyLength()) {
+            return StringNode.valueOf(String.format(LIMIT_EXCEEDED, httpBodySettings.getEffectiveMaxBodyLength()));
         }
 
         return processedBody;
@@ -155,7 +155,7 @@ public class DefaultBodyParser implements BodyParser {
         if (bodyString == null || bodyString.isEmpty()) {
             return null;
         }
-        final boolean isTruncated = httpBodySettings.isEnableBodyTruncating();
+        final boolean isTruncated = httpBodySettings.isBodyTruncatingEnabled();
         if (MediaType.APPLICATION_JSON.isCompatibleWith(contentType)) {
             return tryJson(bodyString, metricsContext)
                     .map(jsonNode -> {
@@ -163,7 +163,7 @@ public class DefaultBodyParser implements BodyParser {
                             return jsonNode;
                         }
                         long truncStart = metrics.startSample();
-                        JsonNode truncated = HttpBodyUtils.truncateAllHugeFieldsInJson(jsonNode, httpBodySettings.getMaxFieldLength());
+                        JsonNode truncated = HttpBodyUtils.truncateAllHugeFieldsInJson(jsonNode, httpBodySettings.getEffectiveMaxFieldLength());
                         metrics.recordPhase(truncStart, metricsContext, "truncate");
                         return truncated;
                     }).orElse(StringNode.valueOf(bodyString));
@@ -212,7 +212,7 @@ public class DefaultBodyParser implements BodyParser {
     }
 
     private JsonNode applyMasking(final JsonNode body, final String requestUrl, HttpBodySettings settings, final BodyMetricsContext metricsContext) {
-        if (body == null || !settings.isEnableBodyMasking()) {
+        if (body == null || !settings.isBodyMaskingEnabled()) {
             return body;
         }
         long maskStart = metrics.startSample();
