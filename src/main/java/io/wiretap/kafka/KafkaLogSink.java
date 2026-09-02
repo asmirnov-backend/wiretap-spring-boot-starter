@@ -93,7 +93,11 @@ public class KafkaLogSink {
      */
     public boolean isRecordLogged(KafkaMessageInfo info) {
         if (info == null || info.getTopic() == null) return false;
-        final KeyJsonInclude include = settings.getSettingsByTopic(info.getTopic()).getKeyInclude();
+        return isRecordLogged(info, settings.getSettingsByTopic(info.getTopic()));
+    }
+
+    private boolean isRecordLogged(KafkaMessageInfo info, KafkaInfoLogMessageSettings effective) {
+        final KeyJsonInclude include = effective.getKeyInclude();
         return include.isEmpty() || include.matches(parseKey(info.getKey()));
     }
 
@@ -122,12 +126,12 @@ public class KafkaLogSink {
                 metrics.recordKafkaSkipped(direction, "exclude_topic");
                 return;
             }
-            if (!isRecordLogged(info)) {
+
+            final KafkaInfoLogMessageSettings effective = settings.getSettingsByTopic(info.getTopic());
+            if (!isRecordLogged(info, effective)) {
                 metrics.recordKafkaSkipped(direction, "filter_key");
                 return;
             }
-
-            final KafkaInfoLogMessageSettings effective = settings.getSettingsByTopic(info.getTopic());
             final FieldVisibilityMap<KafkaConfigurableField> visibility = effective.getVisibilitySettings();
 
             final KafkaMessageInfo masked = applyVisibilityAndMasking(info, effective, visibility, direction);

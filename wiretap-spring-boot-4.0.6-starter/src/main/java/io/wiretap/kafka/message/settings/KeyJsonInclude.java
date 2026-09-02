@@ -1,7 +1,7 @@
 package io.wiretap.kafka.message.settings;
 
-import com.fasterxml.jackson.core.JsonPointer;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.core.JsonPointer;
+import tools.jackson.databind.JsonNode;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,7 +52,7 @@ public final class KeyJsonInclude {
 
     private boolean matches(JsonNode field, List<Pattern> allowed) {
         if (field.isMissingNode() || field.isNull()) return false;
-        return allowed.stream().anyMatch(pattern -> pattern.matcher(field.asText()).matches());
+        return allowed.stream().anyMatch(pattern -> pattern.matcher(field.asString()).matches());
     }
 
     private Map<JsonPointer, List<Pattern>> compile(Map<String, List<String>> raw) {

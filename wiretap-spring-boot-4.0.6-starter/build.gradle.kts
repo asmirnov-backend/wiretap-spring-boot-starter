@@ -173,6 +173,7 @@ val overlayMainFiles = listOf(
     "io/wiretap/http/incoming/provider/WiretapAccessFieldProvider.java",
     "io/wiretap/http/incoming/provider/WiretapDelegatingFieldProvider.java",
     "io/wiretap/http/message/HttpMessageInfo.java",
+    "io/wiretap/kafka/message/settings/KeyJsonInclude.java",
     "io/wiretap/http/message/settings/body/BodyParser.java",
     "io/wiretap/http/message/settings/body/DefaultBodyParser.java",
     "io/wiretap/http/message/settings/body/HttpBodyMaskingHandler.java",

@@ -29,9 +29,8 @@ public class SpecificKafkaInfoLogMessageSettings extends KafkaInfoLogMessageSett
         merged.setHeaders(
                 CollectionUtils.isEmpty(this.getHeaders()) ? common.getHeaders() : this.getHeaders()
         );
-        merged.setKeyJsonInclude(
-                CollectionUtils.isEmpty(this.getKeyJsonInclude())
-                        ? common.getKeyJsonInclude() : this.getKeyJsonInclude()
+        merged.inheritKeyJsonInclude(
+                CollectionUtils.isEmpty(this.getKeyJsonInclude()) ? common : this
         );
         merged.setVisibilitySettings(
                 this.getVisibilitySettings().equals(defaults.getVisibilitySettings())

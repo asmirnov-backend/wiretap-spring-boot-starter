@@ -91,6 +91,22 @@ class KafkaProducerLogMessageSettingsTest {
                         .containsOnlyKeys("/tenant"));
     }
 
+    @Test
+    void perTopicMergeReusesTheCompiledFilter() {
+        runner
+                .withPropertyValues(
+                        "wiretap.kafka-producer-interceptor.key-json-include[/requestSource][0]=system-1",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].match-topic-pattern=orders\\..*",
+                        "wiretap.kafka-producer-interceptor.specific-topic-settings[0].visibility-settings.VALUE=false"
+                )
+                .run(ctx -> {
+                    KafkaProducerLogMessageSettings props = ctx.getBean(KafkaProducerLogMessageSettings.class);
+                    assertThat(props.getSettingsByTopic("orders.events").getKeyInclude())
+                            .as("per-topic merge should not recompile the patterns on every record")
+                            .isSameAs(props.getKeyInclude());
+                });
+    }
+
     @EnableConfigurationProperties(KafkaProducerLogMessageSettings.class)
     static class TestConfig {
     }

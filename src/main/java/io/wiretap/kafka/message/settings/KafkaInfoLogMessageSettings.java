@@ -1,6 +1,5 @@
 package io.wiretap.kafka.message.settings;
 
-import com.fasterxml.jackson.core.JsonPointer;
 import io.wiretap.kafka.message.settings.body.MessageBodySettings;
 import io.wiretap.util.FieldVisibilityMap;
 import lombok.AccessLevel;
@@ -12,11 +11,8 @@ import lombok.ToString;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Data
 public class KafkaInfoLogMessageSettings {
@@ -70,18 +66,17 @@ public class KafkaInfoLogMessageSettings {
 
     public void setKeyJsonInclude(Map<String, List<String>> keyJsonInclude) {
         this.keyJsonInclude = keyJsonInclude == null ? Collections.emptyMap() : keyJsonInclude;
-        this.keyInclude = compile(this.keyJsonInclude);
+        this.keyInclude = new KeyJsonInclude(this.keyJsonInclude);
     }
 
-    private KeyJsonInclude compile(Map<String, List<String>> raw) {
-        final Map<JsonPointer, List<Pattern>> compiled = new LinkedHashMap<>(raw.size());
-        for (Map.Entry<String, List<String>> condition : raw.entrySet()) {
-            compiled.put(
-                    JsonPointer.compile(condition.getKey()),
-                    condition.getValue().stream().map(Pattern::compile).collect(Collectors.toList())
-            );
-        }
-        return new KeyJsonInclude(compiled);
+    /**
+     * Copies the filter of {@code source} — the raw map together with its
+     * compiled twin — so a per-topic merge, which runs per record, never
+     * recompiles pointers and patterns.
+     */
+    void inheritKeyJsonInclude(KafkaInfoLogMessageSettings source) {
+        this.keyJsonInclude = source.getKeyJsonInclude();
+        this.keyInclude = source.getKeyInclude();
     }
 
     private FieldVisibilityMap<KafkaConfigurableField> getDefaultLogSettings() {
