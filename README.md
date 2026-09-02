@@ -10,7 +10,7 @@
 [![compatibility](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/compatibility.yml/badge.svg)](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/compatibility.yml)
 [![release](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/release.yml/badge.svg)](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/release.yml)
 
-**Status:** `1.0.0` is the first public release — available on Maven Central. It's early days: the feature set is in place, but expect rough edges, and please report what breaks on real projects (that's what open source is for). The public API (configuration properties, SPI interfaces, artifact coordinates) follows [semantic versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0 on.
+**Status:** `2.0.0` is the current release — available on Maven Central. The public API (configuration properties, SPI interfaces, artifact coordinates) follows [semantic versioning](https://semver.org/spec/v2.0.0.html) from 1.0.0 on; the major bump comes from settings fields becoming nullable, which changed a few accessor signatures. YAML configuration is unaffected, so upgrading needs no config edits — see the [CHANGELOG](CHANGELOG.md) if you implement `BodyParser` or read the settings classes from code. Please keep reporting what breaks on real projects (that's what open source is for).
 
 > **Try it live.** [`logger-demo`](https://github.com/alexander-kuznetsov/logger-demo) is a
 > runnable Spring Boot sandbox that wires Wiretap into a real app — inbound/outbound HTTP,
@@ -73,10 +73,10 @@ is the exact version the starter was built and tested against:
 
 | Your Spring Boot | Maven coordinate |
 |---|---|
-| `3.2.7`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.2.7-starter:1.0.1` |
-| `3.4.5`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.4.5-starter:1.0.1` |
-| `3.5.14` | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:1.0.1` |
-| `4.0.6`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-4.0.6-starter:1.0.1` |
+| `3.2.7`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.2.7-starter:2.0.0` |
+| `3.4.5`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.4.5-starter:2.0.0` |
+| `3.5.14` | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.0.0` |
+| `4.0.6`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-4.0.6-starter:2.0.0` |
 
 ```gradle
 repositories {
@@ -85,7 +85,7 @@ repositories {
 
 dependencies {
     // coordinate for your Spring Boot version — see the table above
-    implementation 'io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:1.0.1'
+    implementation 'io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.0.0'
 }
 ```
 

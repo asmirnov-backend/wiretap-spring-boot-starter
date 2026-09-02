@@ -6,6 +6,14 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [2.0.0] - 2026-09-02
+
+Major release: the scoped setting overrides finally behave as documented, and
+making that possible changed the types of several public settings fields. YAML
+configuration is unaffected — see *Changed* for the programmatic API.
+
 ### Fixed
 - `specific-http-info-settings[].enable-url-masking` and
   `specific-http-info-settings[].enable-request-params-masking` now actually apply.
