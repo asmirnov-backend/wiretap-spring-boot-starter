@@ -19,6 +19,14 @@ versions before `1.0.0` are pre-release and the public API may change between mi
   record is logged, so 2.0.x behaviour is unchanged. Rejected records are counted
   as `wiretap.kafka.skipped{reason="filter_bean"}`; a filter that throws leaves the
   record in the log and is counted as `reason="filter_error"`.
+- `enable-record-filtering` — toggles that filter from configuration, per topic like
+  the masking switches. The predicate stays in code, but the set of topics it applies
+  to no longer does: `false` globally with `true` on a `specific-topic-settings` block
+  points one bean at exactly the topics that want it, without a rebuild. Defaults to
+  `true`, so a registered bean keeps applying everywhere unless told otherwise, and
+  with no bean present the toggle is a no-op. The per-topic settings lookup now runs
+  just before the filter rather than just after, so a dropped record additionally pays
+  for one topic-pattern match; masking and serialisation still sit behind the filter.
 
 ## [2.0.0] - 2026-09-02
 

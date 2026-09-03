@@ -1236,6 +1236,12 @@
       "description": "Toggle masking of the topic name via KafkaTopicMaskingHandler beans.",
       "defaultValue": true
     },
+    {
+      "name": "wiretap.kafka-producer-interceptor.enable-record-filtering",
+      "type": "java.lang.Boolean",
+      "description": "Toggle the KafkaRecordLogFilter bean deciding whether a record reaches the log at all.",
+      "defaultValue": true
+    },
     { "name": "wiretap.kafka-producer-interceptor.message-body-settings",                                            "type": "io.wiretap.kafka.message.settings.body.MessageBodySettings", "description": "Masking and truncation limits for logged Kafka producer keys and values." },
     { "name": "wiretap.kafka-producer-interceptor.visibility-settings",                                              "type": "java.util.EnumMap",                 "description": "Application-wide field visibility for the Kafka producer interceptor." },
     {
@@ -1291,6 +1297,12 @@
       "description": "Toggle masking of the topic name via KafkaTopicMaskingHandler beans.",
       "defaultValue": true
     },
+    {
+      "name": "wiretap.kafka-consumer-interceptor.enable-record-filtering",
+      "type": "java.lang.Boolean",
+      "description": "Toggle the KafkaRecordLogFilter bean deciding whether a record reaches the log at all.",
+      "defaultValue": true
+    },
     { "name": "wiretap.kafka-consumer-interceptor.message-body-settings",                                            "type": "io.wiretap.kafka.message.settings.body.MessageBodySettings", "description": "Masking and truncation limits for logged Kafka consumer keys and values." },
     { "name": "wiretap.kafka-consumer-interceptor.visibility-settings",                                              "type": "java.util.EnumMap",                 "description": "Application-wide field visibility for the Kafka consumer interceptor." },
     {
@@ -1341,6 +1353,7 @@
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.enable-value-masking",                     "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.enable-headers-masking",                   "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.enable-topic-masking",                     "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
+    { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.enable-record-filtering",                  "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.message-body-settings",                    "type": "io.wiretap.kafka.message.settings.body.MessageBodySettings", "description": "Topic-scoped body settings; each field inherits the common value when unset." },
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.message-body-settings.enable-value-masking", "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-producer-interceptor.specific-topic-settings.message-body-settings.enable-value-truncating", "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
@@ -1364,6 +1377,7 @@
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.enable-value-masking",                     "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.enable-headers-masking",                   "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.enable-topic-masking",                     "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
+    { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.enable-record-filtering",                  "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.message-body-settings",                    "type": "io.wiretap.kafka.message.settings.body.MessageBodySettings", "description": "Topic-scoped body settings; each field inherits the common value when unset." },
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.message-body-settings.enable-value-masking", "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },
     { "name": "wiretap.kafka-consumer-interceptor.specific-topic-settings.message-body-settings.enable-value-truncating", "type": "java.lang.Boolean",                 "description": "Topic-scoped override; inherits the common value when unset." },

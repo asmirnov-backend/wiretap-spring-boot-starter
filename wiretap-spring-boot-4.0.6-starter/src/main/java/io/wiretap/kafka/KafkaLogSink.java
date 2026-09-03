@@ -92,7 +92,8 @@ public class KafkaLogSink {
      * @return {@code true} if the registered {@link KafkaRecordLogFilter} admits
      *         the record, or if no filter bean is present. A filter that throws
      *         admits the record and is counted as {@code filter_error}, so a
-     *         broken predicate never silences the log.
+     *         broken predicate never silences the log. Only reached where the
+     *         effective settings enable filtering for the topic.
      */
     private boolean isRecordLogged(KafkaMessageInfo info, String direction) {
         if (recordLogFilter == null) return true;
@@ -121,12 +122,13 @@ public class KafkaLogSink {
                 return;
             }
 
-            if (!isRecordLogged(info, direction)) {
+            final KafkaInfoLogMessageSettings effective = settings.getSettingsByTopic(info.getTopic());
+
+            if (effective.isRecordFilteringEnabled() && !isRecordLogged(info, direction)) {
                 metrics.recordKafkaSkipped(direction, "filter_bean");
                 return;
             }
 
-            final KafkaInfoLogMessageSettings effective = settings.getSettingsByTopic(info.getTopic());
             final FieldVisibilityMap<KafkaConfigurableField> visibility = effective.getVisibilitySettings();
 
             final KafkaMessageInfo masked = applyVisibilityAndMasking(info, effective, visibility, direction);

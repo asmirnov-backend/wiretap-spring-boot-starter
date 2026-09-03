@@ -797,6 +797,7 @@ wiretap:
     enable-value-masking: true               # call KafkaValueMaskingHandler for key/value
     enable-headers-masking: true             # call KafkaHeaderMaskingHandler for header values
     enable-topic-masking: true               # call KafkaTopicMaskingHandler for topic name
+    enable-record-filtering: true            # call KafkaRecordLogFilter to drop whole records
     message-body-settings:
       enable-value-truncating: true
       max-value-length: 2000
@@ -868,6 +869,8 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
 - the filter runs after `exclude-topic-patterns` and **before** masking,
   truncation and serialisation, so it reads the raw record and a rejected
   one costs nothing else;
+- `enable-record-filtering` switches the bean on and off from config, and
+  like every other toggle it can be overridden per topic (see below);
 - the whole `KafkaMessageInfo` snapshot is passed in — `topic`, `key`,
   `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
   `direction`, `status`, `duration`, `errorClass` — so predicates like
@@ -878,6 +881,21 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
   `wiretap.kafka.skipped{reason="filter_bean"}`;
 - a filter that throws never silences the log: the record is logged and the
   failure is counted as `wiretap.kafka.skipped{reason="filter_error"}`.
+
+Because the predicate lives in code, changing *what* it matches needs a
+rebuild — but changing *where* it applies does not. Leave the bean registered
+and point it at a set of topics from configuration:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    enable-record-filtering: false         # bean idle by default
+    specific-topic-settings:
+      - match-topic-pattern: "orders\\..*"
+        enable-record-filtering: true      # ...and active only here
+```
+
+With no bean registered the toggle has nothing to switch, so it is a no-op.
 
 Filtering the log is not filtering the traffic: to stop the listener from
 processing foreign records, use Spring Kafka's `RecordFilterStrategy` —

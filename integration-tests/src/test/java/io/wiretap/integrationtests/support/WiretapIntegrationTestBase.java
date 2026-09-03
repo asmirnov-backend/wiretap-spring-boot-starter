@@ -26,7 +26,7 @@ import org.springframework.test.context.ActiveProfiles;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 @EmbeddedKafka(
     partitions = 1,
-    topics = {"demo.events", "secrets.test", "secrets.events"},
+    topics = {"demo.events", "secrets.test", "secrets.events", "orders.events"},
     controlledShutdown = true
 )
 @ExtendWith(OutputCaptureExtension.class)

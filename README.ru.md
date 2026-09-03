@@ -802,6 +802,7 @@ wiretap:
     enable-value-masking: true               # вызывать KafkaValueMaskingHandler для key/value
     enable-headers-masking: true             # вызывать KafkaHeaderMaskingHandler для заголовков
     enable-topic-masking: true               # вызывать KafkaTopicMaskingHandler для имени топика
+    enable-record-filtering: true            # вызывать KafkaRecordLogFilter, отбрасывающий записи целиком
     message-body-settings:
       enable-value-truncating: true
       max-value-length: 2000
@@ -873,6 +874,8 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
 - фильтр вызывается после `exclude-topic-patterns` и **до** маскирования,
   обрезки и сериализации, поэтому видит сырую запись, а отброшенная больше
   ничего не стоит;
+- `enable-record-filtering` включает и выключает бин из конфигурации и, как
+  любой другой тумблер, переопределяется по топику (см. ниже);
 - на вход приходит весь снимок `KafkaMessageInfo` — `topic`, `key`,
   `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
   `direction`, `status`, `duration`, `errorClass`, — так что предикаты
@@ -883,6 +886,21 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
   `wiretap.kafka.skipped{reason="filter_bean"}`;
 - исключение внутри фильтра не глушит лог: запись логируется, а сбой
   считается как `wiretap.kafka.skipped{reason="filter_error"}`.
+
+Предикат живёт в коде, поэтому поменять, *что* он матчит, без пересборки
+нельзя — а вот поменять, *где* он применяется, можно. Оставьте бин
+зарегистрированным и наводите его на нужные топики из конфигурации:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    enable-record-filtering: false         # по умолчанию бин молчит
+    specific-topic-settings:
+      - match-topic-pattern: "orders\\..*"
+        enable-record-filtering: true      # ...и работает только здесь
+```
+
+Если бин не зарегистрирован, тумблеру нечего включать — он ни на что не влияет.
 
 Фильтрация лога — не фильтрация трафика: чтобы листенер не обрабатывал
 чужие записи, используйте `RecordFilterStrategy` из Spring Kafka; она

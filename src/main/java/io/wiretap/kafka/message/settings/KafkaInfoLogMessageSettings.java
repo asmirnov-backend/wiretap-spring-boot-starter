@@ -27,6 +27,13 @@ public class KafkaInfoLogMessageSettings {
     /** Toggles masking applied to the logged topic name. See {@link #enableValueMasking}. */
     private Boolean enableTopicMasking;
 
+    /**
+     * Toggles the registered {@code KafkaRecordLogFilter}. Left {@code null} when not
+     * configured, so a per-topic override can tell "inherit" apart from an explicit value.
+     * Without a filter bean the toggle has nothing to switch. See {@link #enableValueMasking}.
+     */
+    private Boolean enableRecordFiltering;
+
     /** Record header names logged by default. */
     private Collection<String> headers = Arrays.asList("x-trace-id", "x-request-id");
 
@@ -50,6 +57,11 @@ public class KafkaInfoLogMessageSettings {
     /** Effective topic masking toggle; enabled unless explicitly turned off. */
     public boolean isTopicMaskingEnabled() {
         return !Boolean.FALSE.equals(enableTopicMasking);
+    }
+
+    /** Effective record filtering toggle; enabled unless explicitly turned off. */
+    public boolean isRecordFilteringEnabled() {
+        return !Boolean.FALSE.equals(enableRecordFiltering);
     }
 
     public enum KafkaConfigurableField {

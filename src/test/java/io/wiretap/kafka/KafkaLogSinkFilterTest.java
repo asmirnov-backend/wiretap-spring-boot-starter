@@ -8,12 +8,14 @@ import io.wiretap.kafka.message.KafkaRecordLogFilter;
 import io.wiretap.kafka.message.KafkaValueMaskingHandler;
 import io.wiretap.kafka.message.settings.KafkaAccessFieldNames;
 import io.wiretap.kafka.message.settings.KafkaConsumerLogMessageSettings;
+import io.wiretap.kafka.message.settings.SpecificKafkaInfoLogMessageSettings;
 import io.wiretap.metrics.WiretapMetrics;
 import io.wiretap.metrics.WiretapMetricsImpl;
 import io.wiretap.metrics.WiretapMetricsProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Verifies the {@link KafkaRecordLogFilter} SPI: a registered bean decides per
  * record whether the log line is written, sees the record before masking, and
  * a filter that throws leaves the record in the log instead of silencing it.
+ *
+ * <p>Also covers {@code enable-record-filtering}: the bean only runs where the
+ * effective per-topic settings admit it.
  */
 class KafkaLogSinkFilterTest {
 
@@ -94,12 +99,54 @@ class KafkaLogSinkFilterTest {
                 null, null, null, null, metrics)
                 .emit(info("any-key"));
 
-        assertThat(emitted()).as("absent filter bean should keep 1.0.x behaviour").isEqualTo(1L);
+        assertThat(emitted()).as("absent filter bean should keep 2.0.x behaviour").isEqualTo(1L);
+    }
+
+    @Test
+    void filterIsIgnoredWhenFilteringIsDisabledGlobally() {
+        KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
+        settings.setEnableRecordFiltering(false);
+
+        sink(settings, record -> false).emit(info("any-key"));
+
+        assertThat(emitted()).as("filtering switched off in config should leave the bean unused").isEqualTo(1L);
+    }
+
+    @Test
+    void filterAppliesOnTopicThatSwitchesFilteringBackOn() {
+        KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
+        settings.setEnableRecordFiltering(false);
+        settings.setSpecificTopicSettings(List.of(filtering("orders\\..*", true)));
+
+        sink(settings, record -> false).emit(info("any-key"));
+
+        assertThat(emitted()).as("per-topic override should switch filtering back on").isZero();
+    }
+
+    @Test
+    void filterIsIgnoredOnTopicThatSwitchesFilteringOff() {
+        KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
+        settings.setSpecificTopicSettings(List.of(filtering("orders\\..*", false)));
+
+        sink(settings, record -> false).emit(info("any-key"));
+
+        assertThat(emitted()).as("per-topic override should switch filtering off").isEqualTo(1L);
     }
 
     private KafkaLogSink sink(KafkaRecordLogFilter filter) {
-        return new KafkaLogSink(new KafkaConsumerLogMessageSettings(), new KafkaAccessFieldNames(),
+        return sink(new KafkaConsumerLogMessageSettings(), filter);
+    }
+
+    private KafkaLogSink sink(KafkaConsumerLogMessageSettings settings, KafkaRecordLogFilter filter) {
+        return new KafkaLogSink(settings, new KafkaAccessFieldNames(),
                 null, null, null, filter, metrics);
+    }
+
+    private static SpecificKafkaInfoLogMessageSettings filtering(String pattern, boolean enabled) {
+        SpecificKafkaInfoLogMessageSettings override = new SpecificKafkaInfoLogMessageSettings();
+        override.setMatchTopicPattern(pattern);
+        override.setEnableRecordFiltering(enabled);
+        return override;
     }
 
     private KafkaMessageInfo info(String key) {

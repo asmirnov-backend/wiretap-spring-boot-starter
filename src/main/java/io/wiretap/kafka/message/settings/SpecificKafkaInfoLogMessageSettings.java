@@ -60,6 +60,10 @@ public class SpecificKafkaInfoLogMessageSettings extends KafkaInfoLogMessageSett
                 this.getEnableTopicMasking() != null
                         ? this.getEnableTopicMasking() : common.getEnableTopicMasking()
         );
+        merged.setEnableRecordFiltering(
+                this.getEnableRecordFiltering() != null
+                        ? this.getEnableRecordFiltering() : common.getEnableRecordFiltering()
+        );
         // Exclusion is a top-level decision made before the per-topic lookup, but carrying it
         // over keeps the merged object a faithful view of the effective settings.
         merged.setExcludeTopicPatterns(common.getExcludeTopicPatterns());
