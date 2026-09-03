@@ -6,6 +6,14 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [2.1.0] - 2026-09-03
+
+A Kafka record can now be kept out of the log by a bean, not only by a topic
+pattern — useful when one topic carries traffic from several producers and only
+part of it is worth logging. Nothing changes without that bean.
+
 ### Added
 - `KafkaRecordLogFilter` — an opt-in SPI deciding per record whether a Kafka log
   line is written at all. One topic often carries traffic from several producers

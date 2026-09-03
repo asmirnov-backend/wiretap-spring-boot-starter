@@ -10,7 +10,7 @@ RU | [EN](README.md)
 [![compatibility](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/compatibility.yml/badge.svg)](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/compatibility.yml)
 [![release](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/release.yml/badge.svg)](https://github.com/alexander-kuznetsov/wiretap-spring-boot-starter/actions/workflows/release.yml)
 
-**Статус:** `2.0.0` — текущий релиз, доступен на Maven Central. Публичный API (конфигурационные свойства, SPI-интерфейсы, координаты артефактов) следует [семантическому версионированию](https://semver.org/lang/ru/) начиная с 1.0.0; мажорная версия — из-за того, что поля настроек стали nullable, а вместе с ними изменились несколько сигнатур геттеров. YAML-конфигурация не затронута, править конфиги при обновлении не нужно — см. [CHANGELOG](CHANGELOG.md), если вы реализуете `BodyParser` или читаете классы настроек из кода. Продолжайте сообщать, что ломается на реальных проектах (за тем и open source).
+**Статус:** `2.1.0` — текущий релиз, доступен на Maven Central. Публичный API (конфигурационные свойства, SPI-интерфейсы, координаты артефактов) следует [семантическому версионированию](https://semver.org/lang/ru/) начиная с 1.0.0. При обновлении с `2.0.x` менять ничего не нужно; при переходе с `1.x` учтите мажорный скачок 2.0.0: поля настроек стали nullable, вместе с ними изменились несколько сигнатур геттеров. YAML-конфигурация не затронута, поэтому [CHANGELOG](CHANGELOG.md) нужен, только если вы реализуете `BodyParser` или читаете классы настроек из кода. Продолжайте сообщать, что ломается на реальных проектах (за тем и open source).
 
 > **Попробуйте вживую.** [`logger-demo`](https://github.com/alexander-kuznetsov/logger-demo) —
 > готовое к запуску Spring Boot приложение, которое подключает Wiretap в реальный сервис:
@@ -73,10 +73,10 @@ correlation ID и встроенным маскированием чувстви
 
 | Ваш Spring Boot | Maven-координата |
 |---|---|
-| `3.2.7`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.2.7-starter:2.0.0` |
-| `3.4.5`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.4.5-starter:2.0.0` |
-| `3.5.14` | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.0.0` |
-| `4.0.6`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-4.0.6-starter:2.0.0` |
+| `3.2.7`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.2.7-starter:2.1.0` |
+| `3.4.5`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.4.5-starter:2.1.0` |
+| `3.5.14` | `io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.1.0` |
+| `4.0.6`  | `io.github.alexander-kuznetsov:wiretap-spring-boot-4.0.6-starter:2.1.0` |
 
 ```gradle
 repositories {
@@ -85,7 +85,7 @@ repositories {
 
 dependencies {
     // координата под вашу версию Spring Boot — см. таблицу выше
-    implementation 'io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.0.0'
+    implementation 'io.github.alexander-kuznetsov:wiretap-spring-boot-3.5.14-starter:2.1.0'
 }
 ```
 
