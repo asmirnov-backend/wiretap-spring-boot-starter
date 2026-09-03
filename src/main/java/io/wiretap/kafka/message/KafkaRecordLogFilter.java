@@ -6,10 +6,15 @@ package io.wiretap.kafka.message;
  * record allowed by {@code exclude-topic-patterns} is logged.
  *
  * <p>The record arrives raw — before masking, truncation and visibility
- * settings — so a filter reads the original key, value and headers, and a
- * rejected record pays for neither masking nor serialisation. The whole
- * snapshot is passed in, so the predicate can also branch on
- * {@code direction}, {@code topic}, {@code groupId} or {@code status}.
+ * settings — so a filter reads the original key and value, and a rejected
+ * record pays for neither masking nor serialisation. Headers are the one
+ * exception: they are already narrowed to the names listed under
+ * {@code headers} and are {@code null} when none matched, so a predicate
+ * cannot branch on a header the configuration does not collect. Their
+ * values are still unmasked. The whole snapshot is passed in, so the
+ * predicate can also branch on {@code direction}, {@code topic},
+ * {@code groupId} or {@code status}; treat it as read-only — it is the
+ * same instance the log line is built from.
  *
  * <p>One bean serves both directions. A filter that throws is treated as
  * "unknown": the record is logged and the failure is counted as
@@ -25,8 +30,12 @@ package io.wiretap.kafka.message;
  *         this.mapper = mapper;
  *     }
  *
- *     &#64;Override public boolean isLogged(KafkaMessageInfo record) {
- *         return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
+ *     &#64;Override public boolean shouldLog(KafkaMessageInfo record) {
+ *         try {
+ *             return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
+ *         } catch (Exception e) {
+ *             return true;
+ *         }
  *     }
  * }
  * </pre>
@@ -37,5 +46,5 @@ public interface KafkaRecordLogFilter {
      * @param record raw record snapshot, before masking and truncation
      * @return {@code true} to write the log line, {@code false} to drop it
      */
-    boolean isLogged(KafkaMessageInfo record);
+    boolean shouldLog(KafkaMessageInfo record);
 }

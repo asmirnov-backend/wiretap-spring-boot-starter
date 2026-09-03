@@ -15,7 +15,9 @@ versions before `1.0.0` are pre-release and the public API may change between mi
   `exclude-topic-patterns` and before masking, truncation and serialisation, so it
   reads the raw record and a rejected one pays for nothing else. It receives the
   whole `KafkaMessageInfo` snapshot — key, value, headers, direction, status,
-  duration — and one bean covers both producer and consumer. Without a bean every
+  duration — and one bean covers both producer and consumer. Headers are the one
+  field that is not raw: they are already narrowed to the names listed under
+  `headers`, so a predicate cannot branch on one wiretap does not collect. Without a bean every
   record is logged, so 2.0.x behaviour is unchanged. Rejected records are counted
   as `wiretap.kafka.skipped{reason="filter_bean"}`; a filter that throws leaves the
   record in the log and is counted as `reason="filter_error"`.

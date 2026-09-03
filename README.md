@@ -855,7 +855,7 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
     }
 
     @Override
-    public boolean isLogged(KafkaMessageInfo record) {
+    public boolean shouldLog(KafkaMessageInfo record) {
         try {
             return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
         } catch (Exception e) {
@@ -874,7 +874,12 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
 - the whole `KafkaMessageInfo` snapshot is passed in — `topic`, `key`,
   `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
   `direction`, `status`, `duration`, `errorClass` — so predicates like
-  "only failures on this topic" need no extra API;
+  "only failures on this topic" need no extra API; treat it as read-only,
+  it is the same instance the log line is built from;
+- `headers` is the one field that is not raw: it is already narrowed to the
+  names listed under `headers` in the configuration (and is `null` when none
+  matched), so a predicate cannot branch on a header wiretap does not
+  collect — the values themselves are still unmasked;
 - one bean covers both directions; branch on `record.getDirection()` when
   producer and consumer need different rules;
 - a rejected record is counted as

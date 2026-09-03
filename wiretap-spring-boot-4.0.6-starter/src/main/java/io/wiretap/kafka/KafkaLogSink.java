@@ -98,7 +98,7 @@ public class KafkaLogSink {
     private boolean isRecordLogged(KafkaMessageInfo info, String direction) {
         if (recordLogFilter == null) return true;
         try {
-            return recordLogFilter.isLogged(info);
+            return recordLogFilter.shouldLog(info);
         } catch (Exception e) {
             log.error("Kafka record log filter failed on topic {}", info.getTopic(), e);
             metrics.recordKafkaSkipped(direction, "filter_error");

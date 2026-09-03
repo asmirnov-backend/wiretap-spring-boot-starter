@@ -860,7 +860,7 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
     }
 
     @Override
-    public boolean isLogged(KafkaMessageInfo record) {
+    public boolean shouldLog(KafkaMessageInfo record) {
         try {
             return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
         } catch (Exception e) {
@@ -879,7 +879,12 @@ public class RequestSourceFilter implements KafkaRecordLogFilter {
 - на вход приходит весь снимок `KafkaMessageInfo` — `topic`, `key`,
   `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
   `direction`, `status`, `duration`, `errorClass`, — так что предикаты
-  вроде «только ошибки по этому топику» не требуют нового API;
+  вроде «только ошибки по этому топику» не требуют нового API; менять его
+  не надо — это тот же объект, из которого строится строка лога;
+- `headers` — единственное поле, приходящее не сырым: заголовки уже сужены
+  до списка `headers` из конфигурации (и равны `null`, если ничего не
+  отобралось), поэтому предикат не может опереться на заголовок, который
+  wiretap не собирает; сами значения при этом не маскированы;
 - один бин покрывает оба направления; если правила для продюсера и
   консьюмера разные, ветвитесь по `record.getDirection()`;
 - отброшенная запись считается как
