@@ -802,6 +802,7 @@ wiretap:
     enable-value-masking: true               # вызывать KafkaValueMaskingHandler для key/value
     enable-headers-masking: true             # вызывать KafkaHeaderMaskingHandler для заголовков
     enable-topic-masking: true               # вызывать KafkaTopicMaskingHandler для имени топика
+    enable-record-filtering: true            # вызывать KafkaRecordLogFilter, отбрасывающий записи целиком
     message-body-settings:
       enable-value-truncating: true
       max-value-length: 2000
@@ -840,6 +841,71 @@ wiretap:
 
 Те же SPI применяются и на consumer-стороне — один бин покрывает обе
 стороны.
+
+#### Фильтрация записей до лога
+
+В один топик часто пишут несколько систем, а логировать нужно только часть
+трафика. Зарегистрируйте один бин
+`io.wiretap.kafka.message.KafkaRecordLogFilter` — он решает по каждой
+записи, писать строку лога или нет:
+
+```java
+@Component
+public class RequestSourceFilter implements KafkaRecordLogFilter {
+
+    private final ObjectMapper mapper;
+
+    public RequestSourceFilter(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
+
+    @Override
+    public boolean isLogged(KafkaMessageInfo record) {
+        try {
+            return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
+        } catch (Exception e) {
+            return true;
+        }
+    }
+}
+```
+
+- бина нет (по умолчанию) — логируется всё, поведение 2.0.x не меняется;
+- фильтр вызывается после `exclude-topic-patterns` и **до** маскирования,
+  обрезки и сериализации, поэтому видит сырую запись, а отброшенная больше
+  ничего не стоит;
+- `enable-record-filtering` включает и выключает бин из конфигурации и, как
+  любой другой тумблер, переопределяется по топику (см. ниже);
+- на вход приходит весь снимок `KafkaMessageInfo` — `topic`, `key`,
+  `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
+  `direction`, `status`, `duration`, `errorClass`, — так что предикаты
+  вроде «только ошибки по этому топику» не требуют нового API;
+- один бин покрывает оба направления; если правила для продюсера и
+  консьюмера разные, ветвитесь по `record.getDirection()`;
+- отброшенная запись считается как
+  `wiretap.kafka.skipped{reason="filter_bean"}`;
+- исключение внутри фильтра не глушит лог: запись логируется, а сбой
+  считается как `wiretap.kafka.skipped{reason="filter_error"}`.
+
+Предикат живёт в коде, поэтому поменять, *что* он матчит, без пересборки
+нельзя — а вот поменять, *где* он применяется, можно. Оставьте бин
+зарегистрированным и наводите его на нужные топики из конфигурации:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    enable-record-filtering: false         # по умолчанию бин молчит
+    specific-topic-settings:
+      - match-topic-pattern: "orders\\..*"
+        enable-record-filtering: true      # ...и работает только здесь
+```
+
+Если бин не зарегистрирован, тумблеру нечего включать — он ни на что не влияет.
+
+Фильтрация лога — не фильтрация трафика: чтобы листенер не обрабатывал
+чужие записи, используйте `RecordFilterStrategy` из Spring Kafka; она
+находится внутри listener-адаптера, поэтому wiretap всё равно логирует
+отброшенные ей записи.
 
 ### Консьюмер
 
@@ -1241,7 +1307,7 @@ wiretap:
 - `status`: `2xx` / `3xx` / `4xx` / `5xx` / `other` / `exception` — никогда не сырое значение кода.
 - `content_type_class`: `json` / `xml` / `text` / `binary` / `other`.
 - `phase`: на `wiretap.body.phase` — `parse` / `mask` / `truncate`; на `wiretap.{http,kafka}.body.capture.failures` — `capture` (чтение/парсинг тела) / `serialize` (рендеринг JSON в MDC).
-- `reason`: `exclude_pattern` / `exclude_topic` / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
+- `reason`: `exclude_pattern` / `exclude_topic` / `filter_bean` (запись Kafka отброшена бином `KafkaRecordLogFilter`) / `filter_error` (этот бин бросил исключение — запись всё равно залогирована) / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
 
 ### Сбор метрик
 

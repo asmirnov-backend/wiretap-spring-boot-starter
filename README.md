@@ -797,6 +797,7 @@ wiretap:
     enable-value-masking: true               # call KafkaValueMaskingHandler for key/value
     enable-headers-masking: true             # call KafkaHeaderMaskingHandler for header values
     enable-topic-masking: true               # call KafkaTopicMaskingHandler for topic name
+    enable-record-filtering: true            # call KafkaRecordLogFilter to drop whole records
     message-body-settings:
       enable-value-truncating: true
       max-value-length: 2000
@@ -835,6 +836,70 @@ Three opt-in masking SPIs are exposed; register a single Spring bean each:
 
 The same SPIs apply to consumer-side logs as well — registering a
 single bean covers both directions.
+
+#### Filtering records out of the log
+
+One topic often carries traffic from several producers while only part of
+it is worth logging. Register a single
+`io.wiretap.kafka.message.KafkaRecordLogFilter` bean to decide per record
+whether a log line is written at all:
+
+```java
+@Component
+public class RequestSourceFilter implements KafkaRecordLogFilter {
+
+    private final ObjectMapper mapper;
+
+    public RequestSourceFilter(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
+
+    @Override
+    public boolean isLogged(KafkaMessageInfo record) {
+        try {
+            return "system-1".equals(mapper.readTree(record.getKey()).path("requestSource").asText());
+        } catch (Exception e) {
+            return true;
+        }
+    }
+}
+```
+
+- no bean (the default) logs everything, so 2.0.x behaviour is unchanged;
+- the filter runs after `exclude-topic-patterns` and **before** masking,
+  truncation and serialisation, so it reads the raw record and a rejected
+  one costs nothing else;
+- `enable-record-filtering` switches the bean on and off from config, and
+  like every other toggle it can be overridden per topic (see below);
+- the whole `KafkaMessageInfo` snapshot is passed in — `topic`, `key`,
+  `value`, `headers`, `partition` / `offset`, `clientId` / `groupId`,
+  `direction`, `status`, `duration`, `errorClass` — so predicates like
+  "only failures on this topic" need no extra API;
+- one bean covers both directions; branch on `record.getDirection()` when
+  producer and consumer need different rules;
+- a rejected record is counted as
+  `wiretap.kafka.skipped{reason="filter_bean"}`;
+- a filter that throws never silences the log: the record is logged and the
+  failure is counted as `wiretap.kafka.skipped{reason="filter_error"}`.
+
+Because the predicate lives in code, changing *what* it matches needs a
+rebuild — but changing *where* it applies does not. Leave the bean registered
+and point it at a set of topics from configuration:
+
+```yaml
+wiretap:
+  kafka-consumer-interceptor:
+    enable-record-filtering: false         # bean idle by default
+    specific-topic-settings:
+      - match-topic-pattern: "orders\\..*"
+        enable-record-filtering: true      # ...and active only here
+```
+
+With no bean registered the toggle has nothing to switch, so it is a no-op.
+
+Filtering the log is not filtering the traffic: to stop the listener from
+processing foreign records, use Spring Kafka's `RecordFilterStrategy` —
+it sits inside the listener adapter, so wiretap still logs what it drops.
 
 ### Consumer
 
@@ -1233,7 +1298,7 @@ Opt-in under `wiretap.async-logging.enabled=true`
 - `status`: `2xx` / `3xx` / `4xx` / `5xx` / `other` / `exception` — never the raw status code.
 - `content_type_class`: `json` / `xml` / `text` / `binary` / `other`.
 - `phase`: on `wiretap.body.phase` — `parse` / `mask` / `truncate`; on `wiretap.{http,kafka}.body.capture.failures` — `capture` (reading/parsing the body) / `serialize` (rendering the MDC JSON).
-- `reason`: `exclude_pattern` / `exclude_topic` / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
+- `reason`: `exclude_pattern` / `exclude_topic` / `filter_bean` (Kafka record rejected by a `KafkaRecordLogFilter` bean) / `filter_error` (that bean threw — record still logged) / `streaming` / `unsupported_content_type` / `visibility_disabled` / `null_topic` / `null_record`.
 
 ### Scraping
 

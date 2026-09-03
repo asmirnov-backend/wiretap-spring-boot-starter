@@ -60,7 +60,7 @@ class KafkaLogSinkMetricsTest {
     void parsePhaseIsRecorded_forJsonValue() {
         KafkaLogSink sink = new KafkaLogSink(
                 new KafkaProducerLogMessageSettings(), new KafkaAccessFieldNames(),
-                null, null, null, metrics);
+                null, null, null, null, metrics);
 
         sink.emit(info("k", "{\"id\":42}"));
 
@@ -73,7 +73,7 @@ class KafkaLogSinkMetricsTest {
     void parsePhaseIsRecorded_forNonJsonValue() {
         KafkaLogSink sink = new KafkaLogSink(
                 new KafkaProducerLogMessageSettings(), new KafkaAccessFieldNames(),
-                null, null, null, metrics);
+                null, null, null, null, metrics);
 
         sink.emit(info("k", "not-json"));
 
@@ -89,7 +89,7 @@ class KafkaLogSinkMetricsTest {
         settings.getMessageBodySettings().setEnableValueMasking(true);
         KafkaLogSink sink = new KafkaLogSink(
                 settings, new KafkaAccessFieldNames(),
-                handler, null, null, metrics);
+                handler, null, null, null, metrics);
 
         sink.emit(info("k", "{\"id\":42}"));
 
@@ -109,7 +109,7 @@ class KafkaLogSinkMetricsTest {
         settings.getMessageBodySettings().setMaxValueLength(20);
         KafkaLogSink sink = new KafkaLogSink(
                 settings, new KafkaAccessFieldNames(),
-                null, null, null, metrics);
+                null, null, null, null, metrics);
 
         sink.emit(info("k", "{\"id\":42,\"name\":\"alice\",\"city\":\"berlin\"}"));
 
@@ -122,7 +122,7 @@ class KafkaLogSinkMetricsTest {
         props.setDetailedTimings(false);
         KafkaLogSink sink = new KafkaLogSink(
                 new KafkaProducerLogMessageSettings(), new KafkaAccessFieldNames(),
-                null, null, null, metrics);
+                null, null, null, null, metrics);
 
         sink.emit(info("k", "{\"id\":42}"));
 
@@ -134,7 +134,7 @@ class KafkaLogSinkMetricsTest {
     void parsePhaseTaggedAsConsumer_forIncomingDirection() {
         KafkaLogSink sink = new KafkaLogSink(
                 new KafkaProducerLogMessageSettings(), new KafkaAccessFieldNames(),
-                null, null, null, metrics);
+                null, null, null, null, metrics);
 
         KafkaMessageInfo incoming = KafkaMessageInfo.builder()
                 .direction(KafkaMessageInfo.Direction.INCOMING)
@@ -164,7 +164,7 @@ class KafkaLogSinkMetricsTest {
         settings.getMessageBodySettings().setMaxValueLength(10);
         KafkaLogSink sink = new KafkaLogSink(
                 settings, new KafkaAccessFieldNames(),
-                handler, null, null, metrics);
+                handler, null, null, null, metrics);
 
         sink.emit(info("k", "{\"id\":42,\"name\":\"alice\"}"));
 

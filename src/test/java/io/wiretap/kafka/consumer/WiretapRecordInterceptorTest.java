@@ -48,7 +48,7 @@ class WiretapRecordInterceptorTest {
     @SuppressWarnings("unchecked")
     void setUp() {
         interceptor = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(new KafkaConsumerLogMessageSettings(), new KafkaAccessFieldNames(), null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(new KafkaConsumerLogMessageSettings(), new KafkaAccessFieldNames(), null, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         sinkLogger = (Logger) LoggerFactory.getLogger(KafkaLogSink.class);
         appender = new ListAppender<>();
@@ -98,7 +98,7 @@ class WiretapRecordInterceptorTest {
         KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
         settings.setExcludeTopicPatterns(List.of("orders\\..*"));
         WiretapRecordInterceptor<String, String> filtered = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         ConsumerRecord<String, String> rec = record("k", "v", new RecordHeaders());
         filtered.intercept(rec, consumer);
@@ -229,7 +229,7 @@ class WiretapRecordInterceptorTest {
         KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
         settings.getVisibilitySettings().put(KafkaConfigurableField.DURATION, Boolean.FALSE);
         WiretapRecordInterceptor<String, String> hidden = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         ConsumerRecord<String, String> rec = record("k", "v", new RecordHeaders());
         hidden.intercept(rec, consumer);
@@ -246,7 +246,7 @@ class WiretapRecordInterceptorTest {
         settings.getVisibilitySettings().put(KafkaConfigurableField.KEY, Boolean.FALSE);
         settings.getVisibilitySettings().put(KafkaConfigurableField.VALUE, Boolean.FALSE);
         WiretapRecordInterceptor<String, String> hidden = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         ConsumerRecord<String, String> rec = record("k", "v", new RecordHeaders());
         hidden.intercept(rec, consumer);
@@ -328,7 +328,7 @@ class WiretapRecordInterceptorTest {
         settings.getMessageBodySettings().setEnableValueTruncating(true);
         settings.getMessageBodySettings().setMaxValueLength(20);
         WiretapRecordInterceptor<String, String> truncating = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         ConsumerRecord<String, String> rec = record("k", "{\"id\":42,\"name\":\"alice\",\"city\":\"berlin\"}", new RecordHeaders());
         truncating.intercept(rec, consumer);
@@ -349,7 +349,7 @@ class WiretapRecordInterceptorTest {
         KafkaConsumerLogMessageSettings settings = new KafkaConsumerLogMessageSettings();
         settings.getMessageBodySettings().setEnableValueMasking(true);
         WiretapRecordInterceptor<String, String> masked = new WiretapRecordInterceptor<>(
-                new KafkaLogSink(settings, new KafkaAccessFieldNames(), handler, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
+                new KafkaLogSink(settings, new KafkaAccessFieldNames(), handler, null, null, null, new io.wiretap.metrics.NoOpWiretapMetrics()));
 
         String singleLine = "{\"id\":42}";
         ConsumerRecord<String, String> rec = record("k", singleLine, new RecordHeaders());

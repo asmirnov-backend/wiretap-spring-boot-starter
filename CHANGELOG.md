@@ -6,7 +6,35 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- `KafkaRecordLogFilter` — an opt-in SPI deciding per record whether a Kafka log
+  line is written at all. One topic often carries traffic from several producers
+  while only part of it is worth logging; a single Spring bean now expresses that
+  rule in code (several key fields, nesting, per-topic policies, values pulled from
+  a feature flag) instead of a configuration DSL. The filter runs after
+  `exclude-topic-patterns` and before masking, truncation and serialisation, so it
+  reads the raw record and a rejected one pays for nothing else. It receives the
+  whole `KafkaMessageInfo` snapshot — key, value, headers, direction, status,
+  duration — and one bean covers both producer and consumer. Without a bean every
+  record is logged, so 2.0.x behaviour is unchanged. Rejected records are counted
+  as `wiretap.kafka.skipped{reason="filter_bean"}`; a filter that throws leaves the
+  record in the log and is counted as `reason="filter_error"`.
+- `enable-record-filtering` — toggles that filter from configuration, per topic like
+  the masking switches. The predicate stays in code, but the set of topics it applies
+  to no longer does: `false` globally with `true` on a `specific-topic-settings` block
+  points one bean at exactly the topics that want it, without a rebuild. Defaults to
+  `true`, so a registered bean keeps applying everywhere unless told otherwise, and
+  with no bean present the toggle is a no-op. The per-topic settings lookup now runs
+  just before the filter rather than just after, so a dropped record additionally pays
+  for one topic-pattern match; masking and serialisation still sit behind the filter.
+
+### Changed
+- `KafkaLogSink` gained a `KafkaRecordLogFilter` constructor parameter, sixth of seven,
+  ahead of `WiretapMetrics`. Code constructing the sink directly needs the extra
+  argument; pass `null` for "no filter". Unlike the `collectHeaders` change in 2.0.0
+  this is not reachable through an injected bean — the sink is built by the starter's
+  own configuration and its `@Bean` is not `@ConditionalOnMissingBean`, so replacing it
+  was never a supported extension point. YAML configuration is unaffected.
 
 ## [2.0.0] - 2026-09-02
 

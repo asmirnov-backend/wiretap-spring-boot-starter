@@ -58,7 +58,7 @@ class KafkaLogSinkHeadersTest {
     }
 
     private static KafkaLogSink sink(KafkaProducerLogMessageSettings settings) {
-        return new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, new NoOpWiretapMetrics());
+        return new KafkaLogSink(settings, new KafkaAccessFieldNames(), null, null, null, null, new NoOpWiretapMetrics());
     }
 
     private static SpecificKafkaInfoLogMessageSettings headersOverride(String pattern, List<String> headers) {

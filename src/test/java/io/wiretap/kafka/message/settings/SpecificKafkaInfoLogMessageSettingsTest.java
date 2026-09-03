@@ -183,6 +183,36 @@ class SpecificKafkaInfoLogMessageSettingsTest {
                 .containsExactly("__consumer_offsets");
     }
 
+    @Test
+    void overrideEnablesRecordFiltering_whenCommonDisablesIt() {
+        KafkaInfoLogMessageSettings common = new KafkaInfoLogMessageSettings();
+        common.setEnableRecordFiltering(false);
+
+        SpecificKafkaInfoLogMessageSettings override = override("orders\\..*");
+        override.setEnableRecordFiltering(true);
+
+        assertThat(override.getIntersectionSettings(common).isRecordFilteringEnabled()).isTrue();
+    }
+
+    @Test
+    void overrideDisablesRecordFiltering_whenCommonEnablesIt() {
+        KafkaInfoLogMessageSettings common = new KafkaInfoLogMessageSettings();
+        common.setEnableRecordFiltering(true);
+
+        SpecificKafkaInfoLogMessageSettings override = override("audit\\..*");
+        override.setEnableRecordFiltering(false);
+
+        assertThat(override.getIntersectionSettings(common).isRecordFilteringEnabled()).isFalse();
+    }
+
+    @Test
+    void overrideInheritsRecordFiltering_whenLeftUnset() {
+        KafkaInfoLogMessageSettings common = new KafkaInfoLogMessageSettings();
+        common.setEnableRecordFiltering(false);
+
+        assertThat(override("orders\\..*").getIntersectionSettings(common).isRecordFilteringEnabled()).isFalse();
+    }
+
     private static SpecificKafkaInfoLogMessageSettings override(String pattern) {
         SpecificKafkaInfoLogMessageSettings override = new SpecificKafkaInfoLogMessageSettings();
         override.setMatchTopicPattern(pattern);
