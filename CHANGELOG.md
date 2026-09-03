@@ -28,6 +28,14 @@ versions before `1.0.0` are pre-release and the public API may change between mi
   just before the filter rather than just after, so a dropped record additionally pays
   for one topic-pattern match; masking and serialisation still sit behind the filter.
 
+### Changed
+- `KafkaLogSink` gained a `KafkaRecordLogFilter` constructor parameter, sixth of seven,
+  ahead of `WiretapMetrics`. Code constructing the sink directly needs the extra
+  argument; pass `null` for "no filter". Unlike the `collectHeaders` change in 2.0.0
+  this is not reachable through an injected bean — the sink is built by the starter's
+  own configuration and its `@Bean` is not `@ConditionalOnMissingBean`, so replacing it
+  was never a supported extension point. YAML configuration is unaffected.
+
 ## [2.0.0] - 2026-09-02
 
 Major release: the scoped setting overrides finally behave as documented, and
