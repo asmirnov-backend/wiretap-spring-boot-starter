@@ -6,7 +6,17 @@ versions before `1.0.0` are pre-release and the public API may change between mi
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Fixed
+- `wiretap.file-logging.enabled` and `wiretap.file-logging.path` now reach the
+  access log as well. The access fragment bound them under dash-separated names —
+  `wiretap.file-logging-enabled` and `wiretap.file-logging-path` — which no
+  documentation ever mentioned and relaxed binding does not reconcile with a dotted
+  path, so the `HTTP_FILE-ROLLING` appender stayed inactive whatever the
+  documented keys were set to and inbound traffic reached the file only through
+  stdout redirection. Both fragments now read the documented keys, so one toggle
+  switches application and access file appenders together. Anyone who found the
+  undocumented spelling and set `wiretap.file-logging-enabled` loses their file
+  appender and should move to `wiretap.file-logging.enabled`.
 
 ## [2.1.0] - 2026-09-03
 

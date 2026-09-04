@@ -105,6 +105,10 @@ wiretap:
     path: /var/log/myapp     # default: /var/log/wiretap
 ```
 
+The toggle covers both streams: `${path}/${spring.application.name}_json.log`
+for the application log and `${path}/${spring.application.name}_access_json.log`
+for the access log.
+
 ### Custom logback config
 
 Wiretap ships a default `logback-spring.xml` and `logback-access.xml`
