@@ -105,6 +105,10 @@ wiretap:
     path: /var/log/myapp     # по умолчанию: /var/log/wiretap
 ```
 
+Тумблер включает оба потока: `${path}/${spring.application.name}_json.log`
+для application-лога и `${path}/${spring.application.name}_access_json.log`
+для access-лога.
+
 ### Свой logback-конфиг
 
 Wiretap кладёт в jar дефолтные `logback-spring.xml` и `logback-access.xml`
